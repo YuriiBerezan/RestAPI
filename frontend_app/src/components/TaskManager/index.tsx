@@ -1,30 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Layout } from 'antd';
-import useTasks, { CustomTask } from './useTasks';
+import useTasks from './api/useTasks';
+import { CustomTask } from './types';
 import TasksList from './TasksList';
 import AddOrEditDialog from './AddOrEditDialog';
 import styled from 'styled-components';
-import Dialog from '../common/Dialog';
+import { useConfirmationDialog } from '../../contexts/ConfirmationDialogContext';
 
 const TaskManager = () => {
   const { tasks, addOrUpdateTask, deleteTask } = useTasks();
-  const [editingTask, setEditingTask] = useState<CustomTask | undefined>();
-  const [delTaskid, setdelTaskid] = useState<number | undefined>();
+
+  const [taskInEditId, setTaskInEditId] = useState<number | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDelConfirmOpen, setIsDelConfirmOpen] = useState(false);
+
+  const {openConfirmation, closeConfirmation} = useConfirmationDialog();
+
   useEffect(() => {
     if (tasks.length === 0) return;
 
     resetForm();
   }, [tasks]);
 
-  const startEditing = (task: CustomTask) => {
-    setEditingTask(task);
+  const startEditing = (taskId: number) => {
+    setTaskInEditId(taskId);
     setIsDialogOpen(true);
   };
 
   const resetForm = () => {
-    setEditingTask(undefined);
+    setTaskInEditId(undefined);
     setIsDialogOpen(false);
   };
 
@@ -41,24 +44,24 @@ const TaskManager = () => {
   };
 
   const onDelete = (taskId: number) => {
-    setdelTaskid(taskId);
-    setIsDelConfirmOpen(true);
+    const delTitle = tasks?.find((task) => task.id === taskId)?.title; 
+
+    openConfirmation({
+        title:'Delete Task',
+        confirmLabel:'Delete',
+        text:`Are you sure you want to delete ${delTitle} task?`,  
+        onConfirm: () => handleDeleteTask(taskId),
+        onCancel: closeConfirmation,     
+    });
   };
 
-  const handleDeleteTask = () => { 
-    if (!delTaskid) return;
-    deleteTask(delTaskid)
-    setIsDelConfirmOpen(false);
+  const handleDeleteTask = (taskId: number) => { 
+    deleteTask(taskId)
+    closeConfirmation();
   }
 
-  const handleCanceleTask = () => { 
-    setdelTaskid(undefined);
-    setIsDelConfirmOpen(false);
-  }
-
-  const delTitle = tasks?.find((task) => task.id === delTaskid)?.title; // this is the best way to get the title of the task to be deleted
-
-
+  const taskInEdit = tasks?.find((task) => task.id === taskInEditId);
+ 
   return (
     <StyledLayout>
       <StyledContent>
@@ -68,19 +71,9 @@ const TaskManager = () => {
         </StyledButton>
         <AddOrEditDialog
           open={isDialogOpen}
-          task={editingTask}
+          task={taskInEdit}
           onSave={onSave}
           onCancel={resetForm}
-        />
-        <Dialog
-          open={isDelConfirmOpen}
-          title={'Delete Task'}
-          submitLabel={'Delete'}
-          onSubmit={handleDeleteTask}
-          onCancel={handleCanceleTask}
-          children={
-          <p>Are you sure you want to delete {delTitle} task?</p>
-          }
         />
       </StyledContent>
     </StyledLayout>
