@@ -105,9 +105,11 @@ const TaskManager = () => {
   return (
     <StyledLayout>
       <StyledContent>
-        <TasksList tasks={tasks}   onEdit={onEditStart} onDelete={onDelete}  />
+        <h1 data-testid="taskmanager-title">Task Manager</h1>
+        
+        <TasksList tasks={tasks} onEdit={onEditStart} onDelete={onDelete}  />
 
-        <StyledButton type="primary" onClick={() => setIsDialogOpen(true)}>
+        <StyledButton type="primary" data-testid="addTaskBtn" onClick={() => setIsDialogOpen(true)}>
           Add Task
         </StyledButton>
 
@@ -115,10 +117,9 @@ const TaskManager = () => {
           key={taskInEdit?.id} // when pass key, the dialog will be treated as a new one, so no need to reset fields inside dialog
           open={isDialogOpen}
           task={taskInEdit}
-          statuses={statuses}
+          statuses={taskInEdit && statuses?.length ? statuses : undefined}
           onSave={onSave}
           onCancel={onEditStop}
-          
         />
       </StyledContent>
     </StyledLayout>
