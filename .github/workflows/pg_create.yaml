@@ -30,5 +30,6 @@ jobs:
             --location ${{ vars.AZURE_LOCATION }} \
             --admin-user ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }} \
             --admin-password ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }} \
-            --sku-name GP_Standard_D2s_v3 \
+            --tier Burstable \
+            --sku-name Standard_B1ms \
             --version 13
