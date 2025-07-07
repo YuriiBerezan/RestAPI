@@ -1,15 +1,13 @@
-Create Azure PostgreSQL Server Pipeline
-
 name: "Create Azure PostgreSQL Server"
 on:
   workflow_dispatch:
-  
+
   push:
     branches:
       - main
-      - create_pipline   
+      - create_pipline
 permissions:
-  id-token: write    
+  id-token: write
   contents: read
 jobs:
   create_postgres_server:
@@ -18,7 +16,6 @@ jobs:
     environment: dev
 
     steps:
-     
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -35,4 +32,3 @@ jobs:
             --admin-password ${{ secret.AZURE_POSTGRESQL_ADMIN_PASSWORD }} \
             --sku-name GP_Standard_D2s_v3 \
             --version 13
-      
