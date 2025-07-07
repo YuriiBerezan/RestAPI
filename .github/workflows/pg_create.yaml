@@ -24,6 +24,8 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Create PostgreSQL Server
         run: |
+          IP=$(curl -s https://ifconfig.me)
+          echo "Runner Public IP: $IP"
           az postgres flexible-server create \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} \
@@ -33,3 +35,4 @@ jobs:
             --tier Burstable \
             --sku-name Standard_B1ms \
             --version 13
+            --public-access $IP
