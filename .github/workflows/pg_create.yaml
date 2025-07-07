@@ -26,7 +26,7 @@ jobs:
         run: |
           IP=$(curl -s https://ifconfig.me)
           echo "Runner Public IP: $IP"
-          if az postgres server show --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+          if az postgres flexible-server show --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
             echo "PostgreSQL server already exists."
           else
             echo "Creating PostgreSQL server..."
