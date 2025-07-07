@@ -1,0 +1,35 @@
+Create Azure PostgreSQL Server Pipeline
+
+name: Create Azure PostgreSQL Server
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at midnight 
+  push:
+    branches:
+      - main
+jobs:
+  create_postgres_server:
+  name  Creating PostgreSQL Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Azure CLI
+        uses: azure/setup-azure-cli@v1
+
+      - name: Login to Azure
+        run: az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Create PostgreSQL Server
+        run: |
+          az postgres server create \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.POSTGRES_SERVER_NAME }} \
+            --location ${{ secrets.AZURE_LOCATION }} \
+            --admin-user ${{ secrets.POSTGRES_ADMIN_USER }} \
+            --admin-password ${{ secrets.POSTGRES_ADMIN_PASSWORD }} \
+            --sku-name B_Gen5_1 \
+            --version 11
+      
