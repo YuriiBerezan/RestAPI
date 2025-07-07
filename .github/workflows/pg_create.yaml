@@ -3,14 +3,13 @@ Create Azure PostgreSQL Server Pipeline
 name: Create Azure PostgreSQL Server
 on:
   workflow_dispatch:
-  # schedule:
-  #   # - cron: '0 0 * * *'  # Runs daily at midnight 
+  
   push:
     branches:
       - main
-      - create_pipline   #  Додано для запуску з гілки feature/pipelines, видалити у фінальній версії
+      - create_pipline   
 permissions:
-  id-token: write     # ОБОВ'ЯЗКОВО для OIDC логіну
+  id-token: write    
   contents: read
 jobs:
   create_postgres_server:
