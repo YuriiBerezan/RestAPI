@@ -3,8 +3,8 @@ Create Azure PostgreSQL Server Pipeline
 name: Create Azure PostgreSQL Server
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'  # Runs daily at midnight 
+  # schedule:
+  #   # - cron: '0 0 * * *'  # Runs daily at midnight 
   push:
     branches:
       - main
