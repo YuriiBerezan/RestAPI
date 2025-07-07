@@ -1,6 +1,6 @@
 Create Azure PostgreSQL Server Pipeline
 
-name: Create Azure PostgreSQL Server
+name: "Create Azure PostgreSQL Server"
 on:
   workflow_dispatch:
   
