@@ -9,17 +9,17 @@ on:
     branches:
       - main
       - create_pipline   #  Додано для запуску з гілки feature/pipelines, видалити у фінальній версії
+permissions:
+  id-token: write     # ОБОВ'ЯЗКОВО для OIDC логіну
+  contents: read
 jobs:
   create_postgres_server:
-  name  Creating PostgreSQL Server
+    name: Creating PostgreSQL Server
     runs-on: ubuntu-latest
+    environment: dev
+
     steps:
-      # - name: Checkout repository
-      #   # uses: actions/checkout@v2
-
-      # - name: Set up Azure CLI
-      #   # uses: azure/setup-azure-cli@v1
-
+     
       - name: Login to Azure
         uses: azure/login@v2
         with:
