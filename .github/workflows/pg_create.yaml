@@ -34,5 +34,5 @@ jobs:
             --admin-password ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }} \
             --tier Burstable \
             --sku-name Standard_B1ms \
-            --version 13
+            --version 16 \
             --public-access $IP
