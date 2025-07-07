@@ -26,13 +26,18 @@ jobs:
         run: |
           IP=$(curl -s https://ifconfig.me)
           echo "Runner Public IP: $IP"
-          az postgres flexible-server create \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} \
-            --location ${{ vars.AZURE_LOCATION }} \
-            --admin-user ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }} \
-            --admin-password ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }} \
-            --tier Burstable \
-            --sku-name Standard_B1ms \
-            --version 16 \
-            --public-access $IP
+          if az postgres server show --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "PostgreSQL server already exists."
+          else
+            echo "Creating PostgreSQL server..."
+            az postgres flexible-server create \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} \
+              --location ${{ vars.AZURE_LOCATION }} \
+              --admin-user ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }} \
+              --admin-password ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }} \
+              --tier Burstable \
+              --sku-name Standard_B1ms \
+              --version 16 \
+              --public-access $IP
+            fi
