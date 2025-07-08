@@ -35,9 +35,9 @@ jobs:
           
           echo "Create PostgreSQL Flexible Server"
           PGDB_NAME="pg-rest-api-westeurope"    
-          RESULT=$(az postgres flexible-server show --name $PGDB_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
+          DB_EXISTS=$(az postgres flexible-server show --name $PGDB_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
 
-          if [ -z "$result" ]; then   
+          if [ -z "$DB_EXISTS" ]; then   
             echo "PostgresSQL $PGDB_NAME does NOT exist."    
             az postgres flexible-server create \
               --resource-group $RESOURCE_GROUP \
@@ -51,7 +51,7 @@ jobs:
               --version 16 \
               --public-access $IP
           else
-            echo "PostgresSQL exists: $result"
+            echo "PostgresSQL exists: $DB_EXISTS"
           fi
             
           echo "Check PostgreSQL server status"
@@ -60,9 +60,9 @@ jobs:
            --resource-group $RESOURCE_GROUP
 
           echo "Create Key Vault"          
-          RESULT=$(az keyvault show --name $KEY_VAULT_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
+          KEY_VAULT_EXISTS=$(az keyvault show --name $KEY_VAULT_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
 
-          if [ -z "$result" ]; then
+          if [ -z "$KEY_VAULT_EXISTS" ]; then
             echo "Key Vault $KEY_VAULT_NAME does NOT exist."
             az keyvault create \
             --name $KEY_VAULT_NAME \
@@ -72,5 +72,5 @@ jobs:
             --enable-soft-delete true \
             --enable-purge-protection true
           else
-            echo "Key Vault exists: $result"
+            echo "Key Vault exists: $KEY_VAULT_EXISTS"
           fi
