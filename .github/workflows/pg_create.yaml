@@ -34,7 +34,7 @@ jobs:
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --location ${{ vars.AZURE_LOCATION }}
           fi
-          group_id=$( az ad group show --group ${{ vars.DEVELOPER_GROUP_NAME }} --query objectId --output tsv)
+          # group_id=$( az ad group show --group ${{ vars.DEVELOPER_GROUP_NAME }} --query objectId --output tsv)
 
           # az role assignment create \
           #   --assignee-object-id $group_id \
