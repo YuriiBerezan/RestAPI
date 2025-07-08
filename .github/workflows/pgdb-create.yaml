@@ -35,9 +35,9 @@ jobs:
           
           echo "Create PostgreSQL Flexible Server"
           PGDB_NAME="pg-rest-api-westeurope"    
-          DB_EXISTS=$(az postgres flexible-server show --name $PGDB_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
+          #DB_EXISTS=$(az postgres flexible-server show --name $PGDB_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
 
-          if [ -z "$DB_EXISTS" ]; then   
+          #if [ -z "$DB_EXISTS" ]; then   
             echo "PostgresSQL $PGDB_NAME does NOT exist."    
             az postgres flexible-server create \
               --resource-group $RESOURCE_GROUP \
@@ -50,9 +50,9 @@ jobs:
               --storage-size 32 \
               --version 16 \
               --public-access $IP
-          else
-            echo "PostgresSQL exists: $DB_EXISTS"
-          fi
+          #else
+            #echo "PostgresSQL exists: $DB_EXISTS"
+          #fi
             
           echo "Check PostgreSQL server status"
           az postgres flexible-server show \
