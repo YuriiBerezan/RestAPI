@@ -63,7 +63,10 @@ jobs:
            --resource-group $RESOURCE_GROUP
 
           echo "Create Key Vault"          
-          KEY_VAULT_EXISTS=$(az keyvault show --name $KEY_VAULT_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
+          KEY_VAULT_EXISTS=$(az keyvault show \
+            --name $KEY_VAULT_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --query "name" -o tsv 2>/dev/null)
 
           if [ -z "$KEY_VAULT_EXISTS" ]; then
             echo "Key Vault $KEY_VAULT_NAME does NOT exist."
@@ -71,9 +74,7 @@ jobs:
             --name $KEY_VAULT_NAME \
             --resource-group $RESOURCE_GROUP \
             --location westeurope \
-            --sku standard \
-            --enable-soft-delete true \
-            --enable-purge-protection true
+            --sku standard
           else
             echo "Key Vault exists: $KEY_VAULT_EXISTS"
           fi
