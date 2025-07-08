@@ -22,6 +22,18 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Create Key Vault
+        run: |
+          echo "Checking if Key Vault exists..."
+          if az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "Key Vault already exists."
+          else
+            echo "Creating Key Vault..."
+            az keyvault create \
+              --name ${{ vars.AZURE_KEY_VAULT_NAME }} \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --location ${{ vars.AZURE_LOCATION }}
+          fi
       - name: Create PostgreSQL Server
         run: |
           IP=$(curl -s https://ifconfig.me)
