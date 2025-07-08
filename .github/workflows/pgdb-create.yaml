@@ -66,13 +66,14 @@ jobs:
            --resource-group $RESOURCE_GROUP
 
           echo "Create Key Vault"  
-          #set +e        
+          set +e        
           KEY_VAULT_EXISTS=$(az keyvault show \
             --name $KEY_VAULT_NAME \
             --resource-group $RESOURCE_GROUP \
             --query "name" -o tsv 2>/dev/null)
-          #set -e
+          set -e
            
+          echo "before if"
           if [ -z "$KEY_VAULT_EXISTS" ]; then
             echo "Key Vault $KEY_VAULT_NAME does NOT exist."
             az keyvault create \
