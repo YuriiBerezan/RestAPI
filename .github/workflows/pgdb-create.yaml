@@ -19,6 +19,7 @@ jobs:
       PG_ADMIN_USER: ${{ secrets.PG_ADMIN_USER }}
       PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
       RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
     steps:
       - name: Log in to Azure with OIDC
         uses: azure/login@v1
@@ -33,20 +34,43 @@ jobs:
           echo "Runner Public IP: $IP"
           
           echo "Create PostgreSQL Flexible Server"
-          PGDB_NAME="pg-rest-api-westeurope"          
-          az postgres flexible-server create \
-            --resource-group $RESOURCE_GROUP \
-            --name $PGDB_NAME \
-            --location westeurope \
-            --admin-user $PG_ADMIN_USER \
-            --admin-password $PG_ADMIN_PASSWORD \
-            --tier Burstable \
-            --sku-name Standard_B1ms \
-            --storage-size 32 \
-            --version 16 \
-            --public-access $IP
+          PGDB_NAME="pg-rest-api-westeurope"    
+          RESULT=$(az postgres flexible-server show --name $PGDB_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
+
+          if [ -z "$result" ]; then   
+            echo "PostgresSQL $PGDB_NAME does NOT exist."    
+            az postgres flexible-server create \
+              --resource-group $RESOURCE_GROUP \
+              --name $PGDB_NAME \
+              --location westeurope \
+              --admin-user $PG_ADMIN_USER \
+              --admin-password $PG_ADMIN_PASSWORD \
+              --tier Burstable \
+              --sku-name Standard_B1ms \
+              --storage-size 32 \
+              --version 16 \
+              --public-access $IP
+          else
+            echo "PostgresSQL exists: $result"
+          fi
             
           echo "Check PostgreSQL server status"
           az postgres flexible-server show \
            --name $PGDB_NAME \
            --resource-group $RESOURCE_GROUP
+
+          echo "Create Key Vault"          
+          RESULT=$(az keyvault show --name $KEY_VAULT_NAME --resource-group $RESOURCE_GROUP --query "name" -o tsv 2>/dev/null)
+
+          if [ -z "$result" ]; then
+            echo "Key Vault $KEY_VAULT_NAME does NOT exist."
+            az keyvault create \
+            --name $KEY_VAULT_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --location westeurope \
+            --sku standard \
+            --enable-soft-delete true \
+            --enable-purge-protection true
+          else
+            echo "Key Vault exists: $result"
+          fi
