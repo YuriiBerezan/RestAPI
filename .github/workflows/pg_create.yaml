@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   create_postgres_server:
-    name: Creating PostgreSQL Server
+    name: Deploy resources for restapi
     runs-on: ubuntu-latest
     environment: dev
 
@@ -34,6 +34,14 @@ jobs:
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --location ${{ vars.AZURE_LOCATION }}
           fi
+          group_id=$( az ad group show --group ${{ vars.DEVELOPER_GROUP_NAME }} --query objectId --output tsv)
+
+          az role assignment create \
+            --assignee-object-id $group_id \
+            --assignee-principal-type Group \
+            --role "Key Vault Secrets Officer" \
+            --scope "/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.KeyVault/vaults/${{ vars.AZURE_KEY_VAULT_NAME }}"
+
       - name: Create PostgreSQL Server
         run: |
           IP=$(curl -s https://ifconfig.me)
