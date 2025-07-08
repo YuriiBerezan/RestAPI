@@ -65,20 +65,21 @@ jobs:
            --name $PGDB_NAME \
            --resource-group $RESOURCE_GROUP
 
-          echo "Create Key Vault"          
+          echo "Create Key Vault"  
+          set +e        
           KEY_VAULT_EXISTS=$(az keyvault show \
             --name $KEY_VAULT_NAME \
             --resource-group $RESOURCE_GROUP \
             --query "name" -o tsv 2>/dev/null)
-
-          echo "check if exists" 
+          set -e
+           
           if [ -z "$KEY_VAULT_EXISTS" ]; then
             echo "Key Vault $KEY_VAULT_NAME does NOT exist."
             az keyvault create \
-            --name $KEY_VAULT_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --location westeurope \
-            --sku standard
+              --name $KEY_VAULT_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --location westeurope \
+              --sku standard
           else
             echo "Key Vault exists: $KEY_VAULT_EXISTS"
           fi
