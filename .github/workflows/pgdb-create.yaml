@@ -34,11 +34,14 @@ jobs:
           echo "Runner Public IP: $IP"
           
           echo "Create PostgreSQL Flexible Server"
-          PGDB_NAME="pg-rest-api-westeurope"   
+          PGDB_NAME="pg-rest-api-westeurope" 
+           
+          set +e
           PGDB_EXISTS=$(az postgres flexible-server show \
             --name "$PGDB_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --query "name" -o tsv 2>/dev/null)
+          set -e
 
           if [ -z "$PGDB_EXISTS" ]; then   
             echo "PostgresSQL $PGDB_NAME does NOT exist."    
