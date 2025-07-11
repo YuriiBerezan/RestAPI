@@ -128,10 +128,12 @@ jobs:
             echo "Log in to GitHub Container Registry"
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            
             echo "Build docker image"
-            docker build -t ghcr.io/${{ github.repository_owner }}/rest-api:latest .
+            docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api:latest .
             echo "Docker image built successfully"
 
             echo "Push docker image to GitHub Container Registry"
-            docker push ghcr.io/${{ github.repository_owner }}/rest-api:latest
+            docker push ghcr.io/$REPO_OWNER_LOWER/rest-api:latest
           
