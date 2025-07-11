@@ -131,16 +131,16 @@ jobs:
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             
             echo "Build BE docker image"
-            docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api:latest backend_app
+            docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api:latest/backend_app
             echo "Docker image built successfully"
 
             echo "Push BE docker image to GitHub Container Registry"
-            docker push ghcr.io/$REPO_OWNER_LOWER/rest-api:latest backend_app
+            docker push ghcr.io/$REPO_OWNER_LOWER/rest-api:latest/backend_app
 
-             echo "Build FE docker image"
-            docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api:latest frontend_app
+            echo "Build FE docker image"
+            docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api:latest/frontend_app
             echo "Docker image built successfully"
 
             echo "Push FE docker image to GitHub Container Registry"
-            docker push ghcr.io/$REPO_OWNER_LOWER/rest-api:latest frontend_app
+            docker push ghcr.io/$REPO_OWNER_LOWER/rest-api:latest/frontend_app
           
