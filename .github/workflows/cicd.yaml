@@ -1,4 +1,4 @@
-name: "[PR] Create Azure PostgreSQL Server Pipeline"
+name: "[PR] Deploy Pipeline"
 
 on:
   push:
@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  create_pgdb:
-    name: Creating PostgreSQL Server
+  deploy_environment:
+    name: Deploy dev environment
     runs-on: ubuntu-latest
     environment: dev
     env:
@@ -27,6 +27,33 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create key vault
+        run: |
+          echo "Create Key Vault"  
+          set +e        
+          KEY_VAULT_EXISTS=$(az keyvault show \
+            --name $KEY_VAULT_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --query "name" -o tsv 2>/dev/null)
+          set -e
+           
+          echo "before if"
+          if [ -z "$KEY_VAULT_EXISTS" ]; then
+            echo "Key Vault $KEY_VAULT_NAME does NOT exist."
+            az keyvault create \
+              --name $KEY_VAULT_NAME \
+              --resource-group $RESOURCE_GROUP \
+              --location westeurope \
+              --sku standard
+          else
+            echo "Key Vault exists: $KEY_VAULT_EXISTS"
+          fi
+
+          az rbac role assignment create \
+            --assignee ${{ vars.DEV_GROUP_ID }} \
+            --role "Key Vault Secrets Officer" \
+            --scope "/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEY_VAULT_NAME"
 
       - name: Deploy PG Flexible Server
         run: |  
@@ -65,22 +92,15 @@ jobs:
            --name $PGDB_NAME \
            --resource-group $RESOURCE_GROUP
 
-          echo "Create Key Vault"  
-          set +e        
-          KEY_VAULT_EXISTS=$(az keyvault show \
-            --name $KEY_VAULT_NAME \
-            --resource-group $RESOURCE_GROUP \
-            --query "name" -o tsv 2>/dev/null)
-          set -e
-           
-          echo "before if"
-          if [ -z "$KEY_VAULT_EXISTS" ]; then
-            echo "Key Vault $KEY_VAULT_NAME does NOT exist."
-            az keyvault create \
-              --name $KEY_VAULT_NAME \
-              --resource-group $RESOURCE_GROUP \
-              --location westeurope \
-              --sku standard
-          else
-            echo "Key Vault exists: $KEY_VAULT_EXISTS"
-          fi
+          echo "Add PostgreSQL secrets in key vault."
+          az keyvault secret set \
+            --vault-name $KEY_VAULT_NAME \
+            --name "pg-admin-user" \
+            --value $PG_ADMIN_USER
+
+          az keyvault secret set \
+            --vault-name $KEY_VAULT_NAME \
+            --name "pg-admin-password" \
+            --value $PG_ADMIN_PASSWORD
+
+      
