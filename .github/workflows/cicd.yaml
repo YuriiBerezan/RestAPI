@@ -12,7 +12,7 @@ permissions:
   packages: write
 
 jobs:
-  create_postgres_server and_key_vault:
+  create_postgres_server_and_key_vault:
     name: Deploy resources for restapi
     runs-on: ubuntu-latest
     environment: dev
