@@ -39,7 +39,6 @@ jobs:
            
           az role assignment create \
              --assignee ${{ vars.DEV_GROUP_ID }} \
-             --assignee-principal-type Group \
              --role "Key Vault Secrets Officer" \
              --scope "/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.KeyVault/vaults/${{ vars.AZURE_KEY_VAULT_NAME }}"
 
