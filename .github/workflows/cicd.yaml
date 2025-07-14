@@ -99,7 +99,7 @@ jobs:
           echo "Push FE docker image to GitHub Container Registry"
           docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
 
-  create webapp:
+  create_webapp:
     name: Deploy resources for restapi
     runs-on: ubuntu-latest
     environment: dev
