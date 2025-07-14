@@ -98,3 +98,55 @@ jobs:
           echo "Docker image built successfully"
           echo "Push FE docker image to GitHub Container Registry"
           docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
+
+  create webapp:
+    name: Deploy resources for restapi
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Create App Service Plan
+        run: |
+          echo "Checking if App Service Plan exists..."
+          if az appservice plan show --name ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "App Service Plan already exists."
+          else
+            echo "Creating App Service Plan..."
+            az appservice plan create \
+              --name ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --sku B1 \
+              --is-linux
+          fi
+      - name: Create backend_app
+        run: |
+          if az webapp show --name ${{ vars.WEBAPP_BACKEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "Web App already exists."
+          else
+            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            echo "Creating Web App..."
+            az webapp create \
+              --name ${{ vars.WEBAPP_BACKEND_NAME }} \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
+              --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
+          fi
+      - name: Create frontend_app
+        run: |
+          if az webapp show --name ${{ vars.WEBAPP_FRONTEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "Web App already exists."
+          else
+            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            echo "Creating Web App..."
+            az webapp create \
+              --name ${{ vars.WEBAPP_FRONTEND_NAME }} \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
+              --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
+          fi
