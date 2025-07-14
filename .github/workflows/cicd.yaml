@@ -122,7 +122,7 @@ jobs:
             az appservice plan create \
               --name ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --sku B1 \
+              --sku F1 \
               --is-linux
           fi
       - name: Create backend_app
