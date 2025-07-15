@@ -18,8 +18,9 @@ jobs:
         run: |
           pytest -v
   vitest:
-    name: Running vitest on Frontend
+    name: Running vitest on Frontend ${{ format('hello world {0, 2}', 'acceptance') }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
