@@ -165,11 +165,11 @@ jobs:
 
         - name: Deploy frontend and backend web apps
           run: |
-              echo "Create App Service Plan"          
+              echo "Create App Service Plan"
               az appservice plan create \
                 --resource-group $RESOURCE_GROUP \
                 --name rest-api-plan \
-                --sku B1 \
+                --sku F1 \
                 --is-linux
 
               REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
