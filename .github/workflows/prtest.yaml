@@ -18,7 +18,7 @@ jobs:
         run: |
           pytest -v
   vitest:
-    name: Running vitest on Frontend ${{ format('hello world {0, 2}', 'acceptance') }}
+    name: Running vitest on Frontend ${{ format('hello world {0}[2]', 'acceptance') }}
     runs-on: ubuntu-latest
 
     steps:
