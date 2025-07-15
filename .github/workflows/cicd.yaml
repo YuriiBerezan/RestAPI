@@ -1,4 +1,4 @@
-name: "Create Azure PostgreSQL Server"
+name: "CICD Rest API Application"
 on:
   workflow_dispatch:
 
