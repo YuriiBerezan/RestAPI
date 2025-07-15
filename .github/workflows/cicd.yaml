@@ -180,14 +180,16 @@ jobs:
                 --resource-group $RESOURCE_GROUP \
                 --name rest-api-frontend \
                 --plan rest-api-plan \
-                --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
+                --container-registry-url ghcr.io \
+                --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
 
               echo "Deploy backend web app"
               az webapp create \
                 --resource-group $RESOURCE_GROUP \
                 --name rest-api-backend \
                 --plan rest-api-plan \
-                --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
+                --container-registry-url ghcr.io \
+                --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
 
               echo "Set environment variables for backend web app"
               az webapp config appsettings set \
