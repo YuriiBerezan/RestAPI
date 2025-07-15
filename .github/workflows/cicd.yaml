@@ -149,7 +149,7 @@ jobs:
       name: Deploy frontend and backend web apps
       runs-on: ubuntu-latest
       environment: dev
-      needs:[deploy_environment, build_docker_image]
+      needs:[deploy_postgres_and_key_vault, build_docker_image]
       env:
         PG_ADMIN_USER: ${{ secrets.PG_ADMIN_USER }}
         PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
