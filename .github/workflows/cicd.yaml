@@ -165,13 +165,25 @@ jobs:
 
         - name: Deploy frontend and backend web apps
           run: |
-              echo "Create App Service Plan"
-              az appservice plan create \
+              echo "Check if App Service Plan exists"
+              set +e
+              PLAN_EXISTS=$(az appservice plan show \
                 --resource-group $RESOURCE_GROUP \
                 --name rest-api-plan \
-                --sku B1 \
-                --is-linux \
-                --location westeurope
+                --query "name" -o tsv 2>/dev/null)
+              set -e
+
+              if [ -z "$PLAN_EXISTS" ]; then
+                echo "Create App Service Plan"
+                az appservice plan create \
+                  --resource-group $RESOURCE_GROUP \
+                  --name rest-api-plan \
+                  --sku B1 \
+                  --is-linux \
+                  --location westeurope
+              else
+                echo "App Service Plan exists: $PLAN_EXISTS"
+              fi
 
               REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
              
