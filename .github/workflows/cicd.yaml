@@ -174,6 +174,26 @@ jobs:
                 --location westeurope
 
               REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+             
+              echo "Deploy backend web app"
+              az webapp create \
+                --resource-group $RESOURCE_GROUP \
+                --name rest-api-backend \
+                --plan rest-api-plan \
+                --container-registry-url ghcr.io \
+                --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
+              
+              echo "Set environment variables for backend web app"
+              az webapp config appsettings set \
+                --resource-group $RESOURCE_GROUP \
+                --name rest-api-backend \
+                --settings PG_ADMIN_USER=$PG_ADMIN_USER PG_ADMIN_PASSWORD=$PG_ADMIN_PASSWORD KEY_VAULT_NAME=$KEY_VAULT_NAME
+
+              echo "Enable logging for backend web app"
+              az webapp log config \
+                --resource-group $RESOURCE_GROUP \
+                --name rest-api-backend \
+                --docker-container-logging filesystem
 
               echo "Deploy frontend web app"
               az webapp create \
@@ -183,16 +203,14 @@ jobs:
                 --container-registry-url ghcr.io \
                 --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
 
-              echo "Deploy backend web app"
-              az webapp create \
-                --resource-group $RESOURCE_GROUP \
-                --name rest-api-backend \
-                --plan rest-api-plan \
-                --container-registry-url ghcr.io \
-                --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
-
-              echo "Set environment variables for backend web app"
+              echo "Set environment variables for frontend web app"
               az webapp config appsettings set \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-backend \
-                --settings PG_ADMIN_USER=$PG_ADMIN_USER PG_ADMIN_PASSWORD=$PG_ADMIN_PASSWORD KEY_VAULT_NAME=$KEY_VAULT_NAME
+                --name rest-api-frontend \
+                --settings PG_ADMIN_USER=$PG_ADMIN_USER KEY_VAULT_NAME=$KEY_VAULT_NAME
+
+              echo "Enable logging for frontend web app"
+              az webapp log config \
+                --resource-group $RESOURCE_GROUP \
+                --name rest-api-frontend \
+                --docker-container-logging filesystem
