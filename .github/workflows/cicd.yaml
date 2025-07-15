@@ -121,6 +121,7 @@ jobs:
             echo "Creating App Service Plan..."
             az appservice plan create \
               --name ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
+              --location ${{ vars.AZURE_LOCATION }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --sku F1 \
               --is-linux
