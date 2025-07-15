@@ -170,7 +170,7 @@ jobs:
                 --resource-group $RESOURCE_GROUP \
                 --name rest-api-plan \
                 --sku B1 \
-                --is-linux
+                --is-linux \
                 --location westeurope
 
               REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
