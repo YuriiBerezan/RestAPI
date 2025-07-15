@@ -137,7 +137,8 @@ jobs:
               --name ${{ vars.WEBAPP_BACKEND_NAME }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
+              --container-registry-url ghcr.io \
+              --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
           fi
       - name: Create frontend_app
         run: |
@@ -150,5 +151,6 @@ jobs:
               --name ${{ vars.WEBAPP_FRONTEND_NAME }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
+              --container-registry-url ghcr.io \
+              --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
           fi
