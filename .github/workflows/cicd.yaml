@@ -141,7 +141,7 @@ jobs:
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
-              --name ${{ vars.WEBAPP_BACKEND_NAME }} \
+              --name "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}" \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --container-registry-url ghcr.io \
@@ -155,7 +155,7 @@ jobs:
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
-              --name ${{ vars.WEBAPP_FRONTEND_NAME }} \
+              --name "rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}" \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --container-registry-url ghcr.io \
