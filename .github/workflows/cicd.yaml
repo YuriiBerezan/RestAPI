@@ -76,6 +76,12 @@ jobs:
               --server-name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
               --database-name tasks_db
 
+            # echo "Allow public access from any Azure service within Azure to this server"
+            # az postgres flexible-server update \
+            #   --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            #   --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
+            #   --public-network-access Enabled
+              
   build_docker_image:
     name: Build docker image and save in Github Container Registry
     runs-on: ubuntu-latest
@@ -156,9 +162,9 @@ jobs:
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --name $BACKEND_WEBAPP_NAME \
             --settings \
-              POSTGRES_HOST=$PG_SERVER_NAME \
-              POSTGRES_USER=${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }} \
-              POSTGRES_PASSWORD=${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
+              POSTGRES_HOST="$PG_SERVER_NAME" \
+              POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" \
+              POSTGRES_PASSWORD="${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}"
 
           echo "Enable logging for backend web app"
           az webapp log config \
