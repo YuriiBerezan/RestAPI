@@ -135,18 +135,37 @@ jobs:
           fi
       - name: Create backend_app
         run: |
-          if az webapp show --name ${{ vars.WEBAPP_BACKEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+          BACKEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
+          PG_SERVER_NAME="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
+
+          if az webapp show --name $BACKEND_WEBAPP_NAME --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
             echo "Web App already exists."
           else
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
-              --name "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}" \
+              --name $BACKEND_WEBAPP_NAME \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --container-registry-url ghcr.io \
               --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
           fi
+
+          echo "Set environment variables for backend web app"
+          az webapp config appsettings set \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name $BACKEND_WEBAPP_NAME \
+            --settings \
+              POSTGRES_HOST=$PG_SERVER_NAME \
+              POSTGRES_USER=${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }} \
+              POSTGRES_PASSWORD=${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
+
+          echo "Enable logging for backend web app"
+          az webapp log config \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name $BACKEND_WEBAPP_NAME \
+            --docker-container-logging filesystem
+
       - name: Create frontend_app
         run: |
           if az webapp show --name ${{ vars.WEBAPP_FRONTEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
