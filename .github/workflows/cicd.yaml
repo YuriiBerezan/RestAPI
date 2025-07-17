@@ -151,3 +151,11 @@ jobs:
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
           fi
+
+      - name: Configure frontend_app settings
+        run: |
+          echo "Configuring frontend_app settings..."
+          az webapp config appsettings set \
+            --name ${{ vars.WEBAPP_FRONTEND_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --settings "BACKEND_URL=https://${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"
