@@ -73,7 +73,7 @@ jobs:
          
           set +e
           PGDB_EXISTS=$(az postgres flexible-server show \
-            --name "PG_SERVER_NAME" \
+            --name "$PG_SERVER_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --query "name" -o tsv 2>/dev/null)
           set -e
@@ -82,7 +82,7 @@ jobs:
             echo "PostgresSQL PG_SERVER_NAME does NOT exist."    
             az postgres flexible-server create \
               --resource-group $RESOURCE_GROUP \
-              --name PG_SERVER_NAME \
+              --name $PG_SERVER_NAME \
               --location westeurope \
               --admin-user $PG_ADMIN_USER \
               --admin-password $PG_ADMIN_PASSWORD \
@@ -97,7 +97,7 @@ jobs:
             
           echo "Check PostgreSQL server status"
           az postgres flexible-server show \
-           --name PG_SERVER_NAME \
+           --name $PG_SERVER_NAME \
            --resource-group $RESOURCE_GROUP
 
           echo "Add PostgreSQL secrets in key vault."
