@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     env:
+      PG_SERVER_NAME: ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}            
       PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
       PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
       RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
@@ -69,20 +70,19 @@ jobs:
           echo "Runner Public IP: $IP"
           
           echo "Create PostgreSQL Flexible Server"
-          PGDB_NAME="pg-rest-api-westeurope" 
-           
+         
           set +e
           PGDB_EXISTS=$(az postgres flexible-server show \
-            --name "$PGDB_NAME" \
+            --name "PG_SERVER_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --query "name" -o tsv 2>/dev/null)
           set -e
 
           if [ -z "$PGDB_EXISTS" ]; then   
-            echo "PostgresSQL $PGDB_NAME does NOT exist."    
+            echo "PostgresSQL PG_SERVER_NAME does NOT exist."    
             az postgres flexible-server create \
               --resource-group $RESOURCE_GROUP \
-              --name $PGDB_NAME \
+              --name PG_SERVER_NAME \
               --location westeurope \
               --admin-user $PG_ADMIN_USER \
               --admin-password $PG_ADMIN_PASSWORD \
@@ -97,7 +97,7 @@ jobs:
             
           echo "Check PostgreSQL server status"
           az postgres flexible-server show \
-           --name $PGDB_NAME \
+           --name PG_SERVER_NAME \
            --resource-group $RESOURCE_GROUP
 
           echo "Add PostgreSQL secrets in key vault."
