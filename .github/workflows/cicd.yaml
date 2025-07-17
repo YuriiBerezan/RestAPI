@@ -1,4 +1,4 @@
-name: "Create Azure PostgreSQL Server"
+name: "CICD Rest API Application"
 on:
   workflow_dispatch:
 
@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - create_pipline
+
 permissions:
   id-token: write
   contents: read
@@ -51,24 +52,36 @@ jobs:
         run: |
           IP=$(curl -s https://ifconfig.me)
           echo "Runner Public IP: $IP"
-          if az postgres flexible-server show --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+          if az postgres flexible-server show --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"; then
             echo "PostgreSQL server already exists."
           else
             echo "Creating PostgreSQL server..."
             az postgres flexible-server create \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --name ${{ vars.AZURE_POSTGRESQL_SERVER_NAME }} \
-              --location ${{ vars.AZURE_LOCATION }} \
-              --admin-user ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }} \
-              --admin-password ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }} \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
+              --location "${{ vars.AZURE_LOCATION }}" \
+              --admin-user "${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" \
+              --admin-password "${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}" \
               --tier Burstable \
               --sku-name Standard_B1ms \
               --version 16 \
               --public-access $IP
             fi
-            az keyvault secret set --vault-name ${{ vars.AZURE_KEY_VAULT_NAME }} --name "AZURE-POSTGRESQL-ADMIN-PASSWORD" --value ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
-            az keyvault secret set --vault-name ${{ vars.AZURE_KEY_VAULT_NAME }} --name "AZURE-POSTGRESQL-ADMIN-USER" --value ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
+            az keyvault secret set --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --name "AZURE-POSTGRESQL-ADMIN-PASSWORD" --value "${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}"
+            az keyvault secret set --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --name "AZURE-POSTGRESQL-ADMIN-USER" --value "${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}"
 
+            echo "Create PostgreSQL database"
+            az postgres flexible-server db create \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --server-name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
+              --database-name tasks_db
+
+            # echo "Allow public access from any Azure service within Azure to this server"
+            # az postgres flexible-server update \
+            #   --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            #   --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
+            #   --public-network-access Enabled
+              
   build_docker_image:
     name: Build docker image and save in Github Container Registry
     runs-on: ubuntu-latest
@@ -121,23 +134,44 @@ jobs:
             echo "Creating App Service Plan..."
             az appservice plan create \
               --name ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
+              --location ${{ vars.AZURE_LOCATION }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --sku F1 \
+              --sku B1 \
               --is-linux
           fi
       - name: Create backend_app
         run: |
-          if az webapp show --name ${{ vars.WEBAPP_BACKEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+          BACKEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
+          PG_SERVER_NAME="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
+
+          if az webapp show --name $BACKEND_WEBAPP_NAME --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
             echo "Web App already exists."
           else
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
-              --name ${{ vars.WEBAPP_BACKEND_NAME }} \
+              --name $BACKEND_WEBAPP_NAME \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
+              --container-registry-url ghcr.io \
+              --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
           fi
+
+          echo "Set environment variables for backend web app"
+          az webapp config appsettings set \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name $BACKEND_WEBAPP_NAME \
+            --settings \
+              POSTGRES_HOST="$PG_SERVER_NAME" \
+              POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" \
+              POSTGRES_PASSWORD="${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}"
+
+          echo "Enable logging for backend web app"
+          az webapp log config \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name $BACKEND_WEBAPP_NAME \
+            --docker-container-logging filesystem
+
       - name: Create frontend_app
         run: |
           if az webapp show --name ${{ vars.WEBAPP_FRONTEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
@@ -146,10 +180,11 @@ jobs:
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
-              --name ${{ vars.WEBAPP_FRONTEND_NAME }} \
+              --name "rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}" \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --deployment-container-image-name ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
+              --container-registry-url ghcr.io \
+              --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
           fi
 
       - name: Configure frontend_app settings
