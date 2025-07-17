@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     env:
-      PG_ADMIN_USER: ${{ secrets.PG_ADMIN_USER }}
-      PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+      PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
+      PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
       RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
       KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
     steps:
@@ -116,8 +116,8 @@ jobs:
       runs-on: ubuntu-latest
       environment: dev
       env:
-        PG_ADMIN_USER: ${{ secrets.PG_ADMIN_USER }}
-        PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+        PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
+        PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
         RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
         KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
       steps:
@@ -151,8 +151,8 @@ jobs:
       environment: dev
       needs: [deploy_postgres_and_key_vault, build_docker_image]
       env:
-        PG_ADMIN_USER: ${{ secrets.PG_ADMIN_USER }}
-        PG_ADMIN_PASSWORD: ${{ secrets.PG_ADMIN_PASSWORD }}
+        PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
+        PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
         RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
         KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
       steps:
@@ -185,12 +185,14 @@ jobs:
                 echo "App Service Plan exists: $PLAN_EXISTS"
               fi
 
+              BACKEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"              
+              PG_SERVER_NAME="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
               REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
              
               echo "Deploy backend web app"
               az webapp create \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-backend \
+                --name $BACKEND_WEBAPP_NAME \
                 --plan rest-api-plan \
                 --container-registry-url ghcr.io \
                 --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
@@ -198,19 +200,29 @@ jobs:
               echo "Set environment variables for backend web app"
               az webapp config appsettings set \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-backend \
-                --settings PG_ADMIN_USER=$PG_ADMIN_USER PG_ADMIN_PASSWORD=$PG_ADMIN_PASSWORD KEY_VAULT_NAME=$KEY_VAULT_NAME
+                --name $BACKEND_WEBAPP_NAME \
+                --settings \
+                  POSTGRES_HOST=$PG_SERVER_NAME \
+                  POSTGRES_USER=$PG_ADMIN_USER \
+                  POSTGRES_PASSWORD=$PG_ADMIN_PASSWORD
 
               echo "Enable logging for backend web app"
               az webapp log config \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-backend \
+                --name $BACKEND_WEBAPP_NAME \
                 --docker-container-logging filesystem
+                  echo "Enable logging for backend web app"
+                  az webapp log config \
+                    --resource-group $RESOURCE_GROUP \
+                    --name rest-api-backend \
+                    --docker-container-logging filesystem
 
+              FRONTEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
+              
               echo "Deploy frontend web app"
               az webapp create \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-frontend \
+                --name $FRONTEND_WEBAPP_NAME \
                 --plan rest-api-plan \
                 --container-registry-url ghcr.io \
                 --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
@@ -218,11 +230,11 @@ jobs:
               echo "Set environment variables for frontend web app"
               az webapp config appsettings set \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-frontend \
-                --settings PG_ADMIN_USER=$PG_ADMIN_USER KEY_VAULT_NAME=$KEY_VAULT_NAME
+                --name $FRONTEND_WEBAPP_NAME \
+                --settings KEY_VAULT_NAME=$KEY_VAULT_NAME
 
               echo "Enable logging for frontend web app"
               az webapp log config \
                 --resource-group $RESOURCE_GROUP \
-                --name rest-api-frontend \
+                --name $FRONTEND_WEBAPP_NAME \
                 --docker-container-logging filesystem
