@@ -100,6 +100,12 @@ jobs:
            --name $PG_SERVER_NAME \
            --resource-group $RESOURCE_GROUP
 
+          echo "Create PostgreSQL database"
+            az postgres flexible-server db create \
+              --resource-group "$RESOURCE_GROUP" \
+              --server-name "$PG_SERVER_NAME" \
+              --database-name tasks_db
+
           echo "Add PostgreSQL secrets in key vault."
           az keyvault secret set \
             --vault-name $KEY_VAULT_NAME \
