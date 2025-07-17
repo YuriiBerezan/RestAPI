@@ -214,7 +214,7 @@ jobs:
                   echo "Enable logging for backend web app"
                   az webapp log config \
                     --resource-group $RESOURCE_GROUP \
-                    --name rest-api-backend \
+                    --name $BACKEND_WEBAPP_NAME \
                     --docker-container-logging filesystem
 
               FRONTEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
