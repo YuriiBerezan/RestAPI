@@ -17,7 +17,7 @@ COPY ./index.html .
 COPY ./src ./src
 
 # Expose Vite's default dev port
-EXPOSE 3000
+EXPOSE 80
 
 # Start the app in dev mode
 CMD ["npm", "run", "dev", "--", "--host"]
