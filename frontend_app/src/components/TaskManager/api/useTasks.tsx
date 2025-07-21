@@ -3,6 +3,7 @@ import axios from 'axios';
 import { notification } from 'antd';
 import { CustomTask, CustomBaseTask } from '../types';
 
+const apiUrl = import.meta.env.VITE_BACKEND_API_URL;
 
 const useTasks = () => {
   const [tasks, setTasks] = useState<CustomTask[]>([] as CustomTask[]);
@@ -11,7 +12,7 @@ const useTasks = () => {
   // Fetch tasks from backend
   useEffect(() => {
     axios
-      .get('http://localhost:8000/v1/tasks')
+      .get(`${apiUrl}/v1/tasks/v1/tasks`)
       .then((response) => {
         setTasks(response.data);
         console.log('render');
@@ -31,7 +32,7 @@ const useTasks = () => {
 
   // Fetch task statuses from backend
     useEffect(() => {
-      axios.get('http://localhost:8000/v1/tasks/statuses')
+      axios.get(`${apiUrl}/v1/tasks/statuses`)
         .then((res) => {
           console.log('render statuses');
           setStatuses(res.data); // Make sure res.data is the array of statuses
@@ -49,7 +50,7 @@ const useTasks = () => {
   // Handle adding or updating a task
  const addTask = (newTask: CustomBaseTask) => {
   axios
-    .post('http://localhost:8000/v1/tasks', newTask)
+    .post(`${apiUrl}v1/tasks`, newTask)
     .then((response) => {
       setTasks([...tasks, response.data]); // Add new task to state
     })
@@ -67,7 +68,7 @@ const useTasks = () => {
 
 const updateTask = (updatedTask: CustomTask) => {
   axios
-    .patch(`http://localhost:8000/v1/tasks`, updatedTask)
+    .patch(`${apiUrl}v1/tasks`, updatedTask)
     .then((response) => {
       setTasks(tasks.map((task) => (task.id === updatedTask.id ? response.data : task))); // Update task in state
     })
@@ -85,7 +86,7 @@ const updateTask = (updatedTask: CustomTask) => {
 
   const deleteTask = (taskId: string) => {
     axios
-      .delete('http://localhost:8000/v1/tasks?task_id=' + taskId)
+      .delete(`${apiUrl}v1/tasks?task_id=${ taskId }`)
       .then((response) => {
         const updatedTasks = tasks.filter((task) => task.id !== taskId);
         setTasks(updatedTasks);

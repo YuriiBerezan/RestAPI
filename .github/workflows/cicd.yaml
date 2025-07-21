@@ -172,25 +172,23 @@ jobs:
             --name $BACKEND_WEBAPP_NAME \
             --docker-container-logging filesystem
 
-      # - name: Create frontend_app
-      #   run: |
-      #     if az webapp show --name ${{ vars.WEBAPP_FRONTEND_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
-      #       echo "Web App already exists."
-      #     else
-      #       REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-      #       echo "Creating Web App..."
-      #       az webapp create \
-      #         --name "rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}" \
-      #         --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-      #         --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-      #         --container-registry-url ghcr.io \
-      #         --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
-      #     fi
-
-      # - name: Configure frontend_app settings
-      #   run: |
-      #     echo "Configuring frontend_app settings..."
-      #     az webapp config appsettings set \
-      #       --name ${{ vars.WEBAPP_FRONTEND_NAME }} \
-      #       --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-      #       --settings "BACKEND_URL=https://${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"
+      - name: Create frontend_app
+        run: |
+          FRONTEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
+          if az webapp show --name $FRONTEND_WEBAPP_NAME --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "Web App already exists."
+          else
+            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            echo "Creating Web App..."
+            az webapp create \
+              --name "$FRONTEND_WEBAPP_NAME" \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
+              --container-registry-url ghcr.io \
+              --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
+          fi
+          echo "Configuring frontend_app settings..."
+          az webapp config appsettings set \
+            --name $FRONTEND_WEBAPP_NAME \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --settings "VITE_BACKEND_API_URL=https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"
