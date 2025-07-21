@@ -81,7 +81,7 @@ jobs:
             #   --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
             #   --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
             #   --public-network-access Enabled
-              
+
   build_docker_image:
     name: Build docker image and save in Github Container Registry
     runs-on: ubuntu-latest
@@ -136,7 +136,7 @@ jobs:
               --name ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --location ${{ vars.AZURE_LOCATION }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --sku B1 \
+              --sku B2 \
               --is-linux
           fi
       - name: Create backend_app
