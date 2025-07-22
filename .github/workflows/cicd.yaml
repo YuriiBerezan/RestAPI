@@ -144,9 +144,6 @@ jobs:
           BACKEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
           PG_SERVER_NAME="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
 
-          if az webapp show --name $BACKEND_WEBAPP_NAME --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
-            echo "Web App already exists."
-          else
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
@@ -155,7 +152,6 @@ jobs:
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --container-registry-url ghcr.io \
               --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
-          fi
 
           echo "Set environment variables for backend web app"
           az webapp config appsettings set \
@@ -175,9 +171,6 @@ jobs:
       - name: Create frontend_app
         run: |
           FRONTEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
-          if az webapp show --name $FRONTEND_WEBAPP_NAME --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
-            echo "Web App already exists."
-          else
             REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
             echo "Creating Web App..."
             az webapp create \
@@ -186,9 +179,15 @@ jobs:
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --container-registry-url ghcr.io \
               --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
-          fi
+              
           echo "Configuring frontend_app settings..."
           az webapp config appsettings set \
             --name $FRONTEND_WEBAPP_NAME \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --settings "VITE_BACKEND_API_URL=https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"
+
+          echo "Enable logging for frontend web app"
+          az webapp log config \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name $FRONTEND_WEBAPP_NAME \
+            --docker-container-logging filesystem
