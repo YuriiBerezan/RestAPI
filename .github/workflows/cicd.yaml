@@ -91,6 +91,7 @@ jobs:
       PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
       RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
       KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
+      VITE_BACKEND_API_URL: "access"
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -179,7 +180,7 @@ jobs:
               --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
               --container-registry-url ghcr.io \
               --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
-              
+
           echo "Configuring frontend_app settings..."
           az webapp config appsettings set \
             --name $FRONTEND_WEBAPP_NAME \
