@@ -9,6 +9,8 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install
+RUN npm install -g serve
+
 
 # Copy the rest of the application
 # COPY . .
@@ -20,16 +22,8 @@ COPY ./vite-env.d.ts .
 
 RUN npm run build
 
-# Use a lightweight image for serving static files
-FROM node:18-alpine
-
-WORKDIR /app
-
-# Install 'serve' to serve the built files
-RUN npm install -g serve
-
-# Copy built files from previous stage
-COPY --from=build /app/dist ./dist
+# # Copy built files from previous stage
+# COPY --from=build /app/dist ./dist
 
 EXPOSE 80
 
