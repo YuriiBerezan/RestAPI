@@ -111,7 +111,7 @@ jobs:
 
           echo "Build FE docker image"
           docker build \
-            --build-arg VITE_BACKEND_API_URL=${{ VITE_BACKEND_API_URL }} \
+            --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
             -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
           
           echo "Docker image built successfully"
