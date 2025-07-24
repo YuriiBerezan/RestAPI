@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - create_pipline
+      - create_pipeline
 
 permissions:
   id-token: write
