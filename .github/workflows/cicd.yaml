@@ -87,10 +87,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     env:
-      PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
-      PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
-      RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-      KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
+      #PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
+      #PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
+      #RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      #KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
       VITE_BACKEND_API_URL: "access"
     steps:
       - name: Checkout code
@@ -111,7 +111,7 @@ jobs:
 
           echo "Build FE docker image"
           docker build \
-            --build-arg VITE_BACKEND_API_URL=${{ env.VITE_BACKEND_API_URL }} \
+            --build-arg VITE_BACKEND_API_URL=${{ VITE_BACKEND_API_URL }} \
             -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
           
           echo "Docker image built successfully"
