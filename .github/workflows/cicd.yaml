@@ -87,11 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     env:
-      #PG_ADMIN_USER: ${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}
-      #PG_ADMIN_PASSWORD: ${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}
-      #RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-      #KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
-      VITE_BACKEND_API_URL: "access"
+      WEBAPP_BACKEND_NAME: ${{ vars.WEBAPP_BACKEND_NAME }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -109,6 +105,8 @@ jobs:
           echo "Push BE docker image to GitHub Container Registry"
           docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
 
+          VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
+
           echo "Build FE docker image"
           docker build \
             --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
@@ -119,7 +117,7 @@ jobs:
           docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
 
   create_webapp:
-    name: Deploy resources for restapi
+    name: Deploy Web Apps
     runs-on: ubuntu-latest
     environment: dev
     needs: [create_postgres_server_and_key_vault, build_docker_image]
