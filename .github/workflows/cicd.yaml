@@ -104,11 +104,16 @@ jobs:
 
           echo "Build BE docker image"
           docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
+          
           echo "Docker image built successfully"
           echo "Push BE docker image to GitHub Container Registry"
           docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
+
           echo "Build FE docker image"
-          docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
+          docker build \
+            --build-arg VITE_BACKEND_API_URL=${{ env.VITE_BACKEND_API_URL }} \
+            -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
+          
           echo "Docker image built successfully"
           echo "Push FE docker image to GitHub Container Registry"
           docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest

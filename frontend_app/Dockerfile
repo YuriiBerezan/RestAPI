@@ -4,6 +4,9 @@ FROM node:18-alpine
 # Set working directory inside container
 WORKDIR /app
 
+ARG VITE_BACKEND_API_URL
+ENV VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL
+
 # Copy package.json and package-lock.json first (better caching)
 COPY package*.json ./
 
