@@ -12,7 +12,7 @@ const useTasks = () => {
   // Fetch tasks from backend
   useEffect(() => {
     axios
-      .get(`${apiUrl}/v1/tasks/v1/tasks`)
+      .get(`${apiUrl}/v1/tasks`)
       .then((response) => {
         setTasks(response.data);
         console.log('render');
@@ -50,7 +50,7 @@ const useTasks = () => {
   // Handle adding or updating a task
  const addTask = (newTask: CustomBaseTask) => {
   axios
-    .post(`${apiUrl}v1/tasks`, newTask)
+    .post(`${apiUrl}/v1/tasks`, newTask)
     .then((response) => {
       setTasks([...tasks, response.data]); // Add new task to state
     })
@@ -68,7 +68,7 @@ const useTasks = () => {
 
 const updateTask = (updatedTask: CustomTask) => {
   axios
-    .patch(`${apiUrl}v1/tasks`, updatedTask)
+    .patch(`${apiUrl}/v1/tasks`, updatedTask)
     .then((response) => {
       setTasks(tasks.map((task) => (task.id === updatedTask.id ? response.data : task))); // Update task in state
     })
@@ -86,7 +86,7 @@ const updateTask = (updatedTask: CustomTask) => {
 
   const deleteTask = (taskId: string) => {
     axios
-      .delete(`${apiUrl}v1/tasks?task_id=${ taskId }`)
+      .delete(`${apiUrl}/v1/tasks?task_id=${ taskId }`)
       .then((response) => {
         const updatedTasks = tasks.filter((task) => task.id !== taskId);
         setTasks(updatedTasks);
