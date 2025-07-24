@@ -1,4 +1,4 @@
-name: "CICD Rest API Application"
+name: "CI/CD Rest API Application"
 on:
   workflow_dispatch:
 
