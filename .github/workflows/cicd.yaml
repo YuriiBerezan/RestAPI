@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - password_in_keyvault
+      - feature/password_in_keyvault
 
 permissions:
   id-token: write
