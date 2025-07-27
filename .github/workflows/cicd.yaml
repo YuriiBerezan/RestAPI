@@ -93,6 +93,7 @@ jobs:
     name: Build docker image and save in Github Container Registry
     runs-on: ubuntu-latest
     environment: dev
+    needs: [create_postgres_server_and_key_vault]
     env:
       WEBAPP_BACKEND_NAME: ${{ vars.WEBAPP_BACKEND_NAME }}
     steps:
@@ -144,7 +145,7 @@ jobs:
     name: Deploy Web Apps
     runs-on: ubuntu-latest
     environment: dev
-    needs: [create_postgres_server_and_key_vault, build_docker_image]
+    needs: [build_docker_image]
 
     steps:
       - name: Login to Azure
