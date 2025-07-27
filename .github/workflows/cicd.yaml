@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - create_pipeline
+      - password_in_keyvault
 
 permissions:
   id-token: write
