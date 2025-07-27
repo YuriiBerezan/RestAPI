@@ -120,7 +120,7 @@ jobs:
           REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
           echo "Build BE docker image"
-          docker build \    
+          docker build \
             --build-arg POSTGRES_PASSWORD=${{ steps.get_secret.outputs.AZURE-POSTGRESQL-ADMIN-PASSWORD }} \
             -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
           
