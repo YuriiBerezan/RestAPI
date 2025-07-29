@@ -235,8 +235,7 @@ jobs:
               --name "$BACKEND_WEBAPP_NAME" \
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
-              --subnet "${{ vars.AZURE_SUBNET_BE }}" \
-              --no-wait
+              --subnet "${{ vars.AZURE_SUBNET_BE }}"
 
       - name: Create frontend_app
         run: |
@@ -267,5 +266,4 @@ jobs:
               --name "$FRONTEND_WEBAPP_NAME" \ 
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
-              --subnet "${{ vars.AZURE_SUBNET_FE }}" \
-              --no-wait
+              --subnet "${{ vars.AZURE_SUBNET_FE }}"
