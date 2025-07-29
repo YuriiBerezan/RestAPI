@@ -232,7 +232,7 @@ jobs:
 
             echo "VNet integration for backend web app"
             az webapp vnet-integration add \
-              --name "$BACKEND_WEBAPP_NAME" \ 
+              --name "$BACKEND_WEBAPP_NAME" \
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
               --subnet "${{ vars.AZURE_SUBNET_BE }}" \
