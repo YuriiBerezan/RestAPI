@@ -231,7 +231,7 @@ jobs:
             --docker-container-logging filesystem 
 
             echo "VNet integration for backend web app"
-            az postgres flexible-server vnet-integration create \
+            az webapp vnet-integration create \
               --name "$BACKEND_WEBAPP_NAME" \ 
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
@@ -263,7 +263,7 @@ jobs:
             --docker-container-logging filesystem
 
             echo "VNet integration for frontend web app"
-            az postgres flexible-server vnet-integration create \
+            az webapp vnet-integration create \
               --name "$FRONTEND_WEBAPP_NAME" \ 
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
