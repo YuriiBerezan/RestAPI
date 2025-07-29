@@ -263,7 +263,7 @@ jobs:
 
             echo "VNet integration for frontend web app"
             az webapp vnet-integration add \
-              --name "$FRONTEND_WEBAPP_NAME" \ 
+              --name "$FRONTEND_WEBAPP_NAME" \
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
               --subnet "${{ vars.AZURE_SUBNET_FE }}"
