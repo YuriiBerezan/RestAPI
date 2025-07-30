@@ -26,5 +26,5 @@ jobs:
 
       - name: Delete all resources in the resource group
         run: |
-          echo "Generate Random PostgreSQL Server Name"
+          echo "Cleaning up resources..."
           az resource list --resource-group $RESOURCE_GROUP --query "[].id" -o tsv | xargs -I {} az resource delete --ids {}
