@@ -165,7 +165,7 @@ jobs:
 
           echo "Build BE docker image"
           docker build \
-            --build-arg POSTGRES_PASSWORD=${{ steps.get_secret.outputs.AZURE-POSTGRESQL-ADMIN-PASSWORD }} \
+            --build-arg POSTGRES_PASSWORD='${{ steps.get_secret.outputs.AZURE-POSTGRESQL-ADMIN-PASSWORD }}' \
             -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
 
           echo "Docker image built successfully"
