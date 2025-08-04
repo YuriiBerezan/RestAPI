@@ -103,15 +103,16 @@ jobs:
               --tier Burstable \
               --sku-name Standard_B1ms \
               --version 16 \
-              --public-access $IP
-
-              echo "VNet integration for PostgreSQL server"
-            az postgres flexible-server vnet-integration create \
-              --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
-              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
-              --subnet "${{ vars.AZURE_SUBNET_DB }}" \
-              --no-wait
+              --subnet "${{ vars.AZURE_SUBNET_DB }}"
+
+            # echo "VNet integration for PostgreSQL server"
+            # az postgres flexible-server vnet-integration create \
+            #   --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
+            #   --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            #   --vnet "${{ vars.AZURE_VNET_NAME }}" \
+            #   --subnet "${{ vars.AZURE_SUBNET_DB }}" \
+            #   --no-wait
 
             echo "Save PostgreSQL admin user and password in Azure Key Vault"
             az keyvault secret set --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --name "AZURE-POSTGRESQL-ADMIN-PASSWORD" --value "$PASSWORD"
@@ -165,7 +166,7 @@ jobs:
 
           echo "Build BE docker image"
           docker build \
-            --build-arg POSTGRES_PASSWORD='${{ steps.get_secret.outputs.AZURE-POSTGRESQL-ADMIN-PASSWORD }}' \
+            --build-arg POSTGRES_PASSWORD="${{ steps.get_secret.outputs.AZURE-POSTGRESQL-ADMIN-PASSWORD }}" \
             -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
 
           echo "Docker image built successfully"
