@@ -104,7 +104,8 @@ jobs:
               --sku-name Standard_B1ms \
               --version 16 \
               --vnet "${{ vars.AZURE_VNET_NAME }}" \
-              --subnet "${{ vars.AZURE_SUBNET_DB }}"
+              --subnet "${{ vars.AZURE_SUBNET_DB }}" \
+              --yes
 
             # echo "VNet integration for PostgreSQL server"
             # az postgres flexible-server vnet-integration create \
