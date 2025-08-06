@@ -1,0 +1,64 @@
+name: Create NSG Rule
+
+inputs:
+  AZURE_RESOURCE_GROUP:
+    description: 'Azure Resource Group Name'
+    required: true
+    type: string
+  AZURE_NSG_NAME:
+    description: 'Azure NSG Name'
+    required: true
+    type: string
+  AZURE_LOCATION:
+    description: 'Azure Location'
+    required: true
+    type: string
+  NSG_RULE_NAME:
+    description: 'Azure NSG Rule Name'
+    required: false
+    type: string
+    default: 'AllowTraffic'
+  ALLOWED_PORTS:
+    description: 'Comma-separated list of allowed ports'
+    required: false
+    type: string
+    default: '80,443'
+
+runs:
+  using: composite
+  steps:
+    - name: Create ${{ inputs.AZURE_NSG_NAME }} NSG Rule Port 
+      run: |
+        |
+          echo "Checking if '${{ inputs.AZURE_NSG_NAME }}' NSG for VNet exists..."
+          if az network nsg show --name ${{ inputs.AZURE_NSG_NAME }} --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}; then
+            echo "NSG already exists."
+          else
+            echo "Creating NSG for VNet..."
+            az network nsg create \
+              --name ${{ inputs.AZURE_NSG_NAME }} \
+              --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} \
+              --location ${{ inputs.AZURE_LOCATION }}
+          fi
+
+          PORTS=$(echo ${{ inputs.ALLOWED_PORTS }} | tr ',' ' ')
+          for PORT in $PORTS; do
+            echo "Checking if NSG rule for port $PORT exists..."
+            if az network nsg rule show --nsg-name ${{ inputs.AZURE_NSG_NAME }} --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} --name "${{ inputs.NSG_RULE_NAME}}-$PORT"; then
+              echo "NSG rule for port $PORT already exists."
+            else
+              echo "Creating NSG rule for port $PORT..."
+              az network nsg rule create \
+                --nsg-name ${{ inputs.AZURE_NSG_NAME }} \
+                --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} \
+                --name ${{ inputs.NSG_RULE_NAME}}-$PORT \
+                --priority 1000 \
+                --direction Inbound \
+                --access Allow \
+                --protocol Tcp \
+                --source-address-prefixes '*' \
+                --source-port-ranges '*' \
+                --destination-address-prefixes '*' \
+                --destination-port-ranges $PORT
+            fi
+          done
