@@ -1,0 +1,71 @@
+name: Create Docker Image NSG
+description: |
+  'Builds a Docker image in the repository'
+inputs:
+  docker_password:
+    required: true
+    description: "Docker password"
+  docker_username:
+    required: true
+    description: "Docker username"
+  docker_owner:
+    required: true
+    description: "Docker owner"
+  docker_args:
+    description: "Docker build arguments"
+    required: false
+    default: ""
+  tag:
+    description: "v1.0.0"
+    required: false
+    default: "latest"
+  image_name:
+    description: "Name of the Docker image"
+    required: true
+  source_path:
+    description: "Path to the Dockerfile"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build args function
+      shell: bash
+      id: build_args
+      run: |
+        echo "Building args for docker build"
+        function build_args() {
+          local args=()
+          for arg in "${{ inputs.docker_args }}"; do
+            args+=("--build-arg" "$arg")
+          done
+          echo "${args[@]}"
+        }
+        echo "args=$(build_args)" >> $GITHUB_OUTPUT
+
+    - name: Build docker images and push it to GitHub Container Registry
+      shell: bash
+      run: |
+        echo "Log in to GitHub Container Registry"
+        echo "${{ inputs.docker_password }}" | docker login ghcr.io -u ${{ inputs.docker_username }} --password-stdin
+        REPO_OWNER_LOWER=$(echo "${{ inputs.docker_owner }}" | tr '[:upper:]' '[:lower:]')
+
+        echo "Build ${{ inputs.image_name }} docker image"
+        docker build \
+          ${{ steps.build_args.outputs.args}} \
+          -t ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }} ${{ inputs.source_path }}
+
+        echo "Docker image built successfully"
+        echo "Push ${{ inputs.image_name }} docker image to GitHub Container Registry"
+        docker push ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }}
+
+          # VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
+
+          # echo "Build FE docker image"
+          # docker build \
+          #   --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
+          #   -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
+
+          # echo "Docker image built successfully"
+          # echo "Push FE docker image to GitHub Container Registry"
+          # docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
