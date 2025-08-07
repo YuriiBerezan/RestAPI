@@ -87,7 +87,7 @@ jobs:
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_FE }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           NSG_RULE_NAME: "AllowTraffic4Port"
-          ALLOWED_PORTS: '80,443'
+          ALLOWED_PORTS: "80,443"
 
       # No need any specific rules for BE NSG
       # Needed functionality covered by default rules
@@ -186,32 +186,55 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Build and push BE Docker image
+        uses: ./.github/actions/CreateDockerImage
+        with:
+          docker_password: ${{ secrets.GITHUB_TOKEN }}
+          docker_username: ${{ github.actor }}
+          docker_owner: ${{ github.repository_owner }}
+          image_name: rest-api-backend
+          source_path: backend_app
+          tag: latest
+          docker_args: |
+            POSTGRES_PASSWORD="${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}"
 
-      - name: Build docker images and push it to GitHub Container Registry
-        run: |
-          echo "Log in to GitHub Container Registry"
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+      - name: Build and push FE Docker image
+        uses: ./.github/actions/CreateDockerImage
+        with:
+          docker_password: ${{ secrets.GITHUB_TOKEN }}
+          docker_username: ${{ github.actor }}
+          docker_owner: ${{ github.repository_owner }}
+          image_name: rest-api-frontend
+          source_path: frontend_app
+          tag: latest
+          docker_args: |
+            VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
 
-          echo "Build BE docker image"
-          docker build \
-            --build-arg POSTGRES_PASSWORD="${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}" \
-            -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
+      # - name: Build docker images and push it to GitHub Container Registry
+      #   run: |
+      #     echo "Log in to GitHub Container Registry"
+      #     echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      #     REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
-          echo "Docker image built successfully"
-          echo "Push BE docker image to GitHub Container Registry"
-          docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
+      #     echo "Build BE docker image"
+      #     docker build \
+      #       --build-arg POSTGRES_PASSWORD="${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}" \
+      #       -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
 
-          VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
+      #     echo "Docker image built successfully"
+      #     echo "Push BE docker image to GitHub Container Registry"
+      #     docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
 
-          echo "Build FE docker image"
-          docker build \
-            --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
-            -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
+      #     VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
 
-          echo "Docker image built successfully"
-          echo "Push FE docker image to GitHub Container Registry"
-          docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
+      #     echo "Build FE docker image"
+      #     docker build \
+      #       --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
+      #       -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
+
+      #     echo "Docker image built successfully"
+      #     echo "Push FE docker image to GitHub Container Registry"
+      #     docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
 
   create_webapp:
     name: Deploy Web Apps
