@@ -77,7 +77,7 @@ jobs:
         with:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_BE }}
-          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}  
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           ALLOWED_PORTS: "80,443"
           NSG_RULE_NAME: "AllowTraffic4Port"
       - name: Create DB NSG
@@ -86,11 +86,8 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_DB }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          NSG_RULE_NAME: ${{ vars.NSG_RULE_NAME }}
-          ALLOWED_PORTS: "5432"
           NSG_RULE_NAME: "AllowTraffic4Port"
-          ALLOWED_PORTS: '5432'
-
+          ALLOWED_PORTS: "5432"
 
       - name: Create Key Vault
         run: |
