@@ -44,14 +44,6 @@ jobs:
               --address-prefixes 10.0.0.0/16
           fi
           address_prefix=1
-          for subnet in ${{ vars.AZURE_SUBNET_BE }} ${{ vars.AZURE_SUBNET_FE }} ${{ vars.AZURE_SUBNET_DB }} ; do
-            echo "Creating Subnet for $subnet..."
-            if [[ "$subnet" == "${{ vars.AZURE_SUBNET_BE }}" ]] || [[ "$subnet" == "${{ vars.AZURE_SUBNET_FE }}" ]]; then
-              az network vnet subnet create \
-                --name $subnet \
-                --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-                --vnet-name ${{ vars.AZURE_VNET_NAME }} \
-                --address-prefixes 10.0.$address_prefix.0/24 \
 
           # Define subnet delegation mapping
           declare -A subnet_delegations
