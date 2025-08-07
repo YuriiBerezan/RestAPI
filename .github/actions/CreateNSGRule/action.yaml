@@ -27,9 +27,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Create ${{ inputs.AZURE_NSG_NAME }} NSG Rule Port 
+    - name: Create ${{ inputs.AZURE_NSG_NAME }} NSG Rule Port
+      shell: bash
       run: |
-        |
           echo "Checking if '${{ inputs.AZURE_NSG_NAME }}' NSG for VNet exists..."
           if az network nsg show --name ${{ inputs.AZURE_NSG_NAME }} --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}; then
             echo "NSG already exists."
