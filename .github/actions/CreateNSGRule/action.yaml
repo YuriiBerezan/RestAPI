@@ -42,17 +42,18 @@ runs:
           fi
 
           PORTS=$(echo ${{ inputs.ALLOWED_PORTS }} | tr ',' ' ')
+          PRIO=1000
           for PORT in $PORTS; do
             echo "Checking if NSG rule for port $PORT exists..."
-            if az network nsg rule show --nsg-name ${{ inputs.AZURE_NSG_NAME }} --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} --name "${{ inputs.NSG_RULE_NAME}}-$PORT"; then
+            if az network nsg rule show --nsg-name ${{ inputs.AZURE_NSG_NAME }} --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} --name "${{ inputs.NSG_RULE_NAME}}-$PORT-pr-$PRIO"; then
               echo "NSG rule for port $PORT already exists."
             else
               echo "Creating NSG rule for port $PORT..."
               az network nsg rule create \
                 --nsg-name ${{ inputs.AZURE_NSG_NAME }} \
                 --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} \
-                --name ${{ inputs.NSG_RULE_NAME}}-$PORT \
-                --priority 1000 \
+                --name ${{ inputs.NSG_RULE_NAME}}-$PORT-pr-$PRIO \
+                --priority $PRIO \
                 --direction Inbound \
                 --access Allow \
                 --protocol Tcp \
@@ -61,4 +62,5 @@ runs:
                 --destination-address-prefixes '*' \
                 --destination-port-ranges $PORT
             fi
+            PRIO=$((PRIO + 100))
           done
