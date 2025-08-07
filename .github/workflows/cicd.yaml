@@ -78,7 +78,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_BE }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          NSG_RULE_NAME: ${{ vars.NSG_RULE_NAME }}
+          NSG_RULE_NAME: "AllowTraffic4Port"
           ALLOWED_PORTS: '80,443'
 
       - name: Create DB NSG 
@@ -87,7 +87,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_DB }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          NSG_RULE_NAME: ${{ vars.NSG_RULE_NAME }}
+          NSG_RULE_NAME: "AllowTraffic4Port"
           ALLOWED_PORTS: '5432'
 
 
