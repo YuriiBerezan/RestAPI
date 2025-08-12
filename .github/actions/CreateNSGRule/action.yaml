@@ -22,7 +22,7 @@ inputs:
     description: "Comma-separated list of allowed ports"
     required: false
     type: string
-    default: "80,443"
+    default: ""
 
 runs:
   using: composite

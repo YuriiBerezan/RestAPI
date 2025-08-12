@@ -44,15 +44,23 @@ jobs:
               --address-prefixes 10.0.0.0/16
           fi
           address_prefix=1
+
+          # Define subnet delegation mapping
+          declare -A subnet_delegations
+          subnet_delegations["${{ vars.AZURE_SUBNET_BE }}"]="Microsoft.Web/serverFarms"
+          subnet_delegations["${{ vars.AZURE_SUBNET_FE }}"]="Microsoft.Web/serverFarms"
+          subnet_delegations["${{ vars.AZURE_SUBNET_DB }}"]="Microsoft.DBforPostgreSQL/flexibleServers"
+          
           for subnet in ${{ vars.AZURE_SUBNET_BE }} ${{ vars.AZURE_SUBNET_FE }} ${{ vars.AZURE_SUBNET_DB }} ; do
             echo "Creating Subnet for $subnet..."
-            if [[ "$subnet" == "${{ vars.AZURE_SUBNET_BE }}" ]] || [[ "$subnet" == "${{ vars.AZURE_SUBNET_FE }}" ]]; then
+            delegation="${subnet_delegations[$subnet]}"
+            if [[ -n "$delegation" ]]; then
               az network vnet subnet create \
                 --name $subnet \
                 --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
                 --vnet-name ${{ vars.AZURE_VNET_NAME }} \
                 --address-prefixes 10.0.$address_prefix.0/24 \
-                --delegations Microsoft.Web/serverFarms
+                --delegations $delegation
             else
               az network vnet subnet create \
                 --name $subnet \
@@ -63,7 +71,8 @@ jobs:
             address_prefix=$((address_prefix + 1))
           done
 
-      - name: Create FE NSG
+      # Allow 80 and 443 ports fro,
+      - name: Create FE NSG 
         uses: ./.github/actions/CreateNSGRule
         with:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
@@ -72,22 +81,23 @@ jobs:
           NSG_RULE_NAME: "AllowTraffic4Port"
           ALLOWED_PORTS: "80,443"
 
+      # No need any specific rules for BE NSG
+      # Needed functionality covered by default rules
       - name: Create BE NSG
         uses: ./.github/actions/CreateNSGRule
         with:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_BE }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          ALLOWED_PORTS: "80,443"
-          NSG_RULE_NAME: "AllowTraffic4Port"
-      - name: Create DB NSG
+
+      # No need any specific rules for BE NSG
+      # Needed functionality covered by default rules
+      - name: Create DB NSG 
         uses: ./.github/actions/CreateNSGRule
         with:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_DB }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          NSG_RULE_NAME: "AllowTraffic4Port"
-          ALLOWED_PORTS: "5432"
 
       - name: Create Key Vault
         run: |
