@@ -1,0 +1,70 @@
+name: Create WebApp
+
+inputs:
+  WEBAPP_NAME:
+    description: "Name of the  web app"
+    required: true
+    type: string
+  AZURE_APP_SERVICE_PLAN_NAME:
+    description: "Azure App Service Plan name"
+    required: true
+    type: string
+  AZURE_RESOURCE_GROUP:
+    description: "Azure Resource Group Name"
+    required: true
+    type: string
+  WEBAPP_VNET_NAME:
+    description: "Azure Virtual Network Name"
+    required: true
+    type: string
+  WEBAPP_SUBNET:
+    description: "Azure Subnet Name for the web app"
+    required: true
+    type: string
+  CONTAINER_IMAGE_NAME:
+    description: "Container image name in GitHub Container Registry"
+    required: true
+    type: string
+  WEBAPP_SETTINGS:
+    description: "Environment variables for the web app in key=value format(space separated)"
+    required: false
+    type: string
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Create WebApp
+      shell: pwsh
+      run: |
+        echo "Creating Web App..."
+        az webapp create `
+          --name ${{ inputs.WEBAPP_NAME }} `
+          --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
+          --plan ${{ inputs.AZURE_APP_SERVICE_PLAN_NAME }} `
+          --container-registry-url ghcr.io `
+          --container-image-name ${{ inputs.CONTAINER_IMAGE_NAME }} 
+
+        if ('${{ inputs.WEBAPP_SETTINGS }}' -match '^(\w+=\w+ ?)+$') {
+        echo "Set environment variables for ${{ inputs.WEBAPP_NAME }}"
+          az webapp config appsettings set `
+            --name ${{ inputs.WEBAPP_NAME }} `
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
+            --settings ${{ inputs.WEBAPP_SETTINGS }}
+        }
+        else {
+          echo "No environment variables to set."
+        }
+
+        echo "Enable logging for backend web app"
+        az webapp log config `
+          --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
+          --name ${{ inputs.WEBAPP_NAME }} `
+          --docker-container-logging filesystem
+
+        echo "VNet integration for backend web app"
+        az webapp vnet-integration add `
+          --name ${{ inputs.WEBAPP_NAME }} `
+          --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
+          --vnet "${{ inputs.WEBAPP_VNET_NAME }}" `
+          --subnet "${{ inputs.WEBAPP_SUBNET }}"
