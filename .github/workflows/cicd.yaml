@@ -241,8 +241,7 @@ jobs:
           WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
           WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_BE }}
           CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-backend:latest"
-          WEBAPP_SETTINGS: "POSTGRES_HOST='${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com' POSTGRES_USER='${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}' POSTGRES_PASSWORD='1223wwsd'"
-
+          WEBAPP_SETTINGS: 'POSTGRES_HOST="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com" POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" POSTGRES_PASSWORD="1223wwsd"'
       - name: Create frontend_app
         uses: ./.github/actions/CreateWebAPP
         with:
@@ -252,4 +251,4 @@ jobs:
           WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
           WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_FE }}
           CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-frontend:latest"
-          WEBAPP_SETTINGS: "VITE_BACKEND_API_URL='https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net'"
+          WEBAPP_SETTINGS: 'VITE_BACKEND_API_URL="https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"'
