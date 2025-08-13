@@ -241,7 +241,7 @@ jobs:
           WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
           WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_BE }}
           CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-backend:latest"
-          WEBAPP_SETTINGS: "POSTGRES_HOST='${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com' POSTGRES_USER='${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}' POSTGRES_PASSWORD='${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}'"
+          WEBAPP_SETTINGS: "POSTGRES_HOST='${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com' POSTGRES_USER='${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}' POSTGRES_PASSWORD='1223wwsd'"
 
       - name: Create frontend_app
         uses: ./.github/actions/CreateWebAPP
