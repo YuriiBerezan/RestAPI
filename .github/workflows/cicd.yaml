@@ -228,6 +228,7 @@ jobs:
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --sku B2 \
               --is-linux
+          fi
 
       - name: Create backend_app
         uses: ./.github/actions/CreateWebAPP
