@@ -208,6 +208,8 @@ jobs:
     environment: dev
     needs: [build_docker_image]
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Login to Azure
         uses: azure/login@v2
         with:
