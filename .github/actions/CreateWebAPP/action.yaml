@@ -25,6 +25,7 @@ inputs:
     description: "Container image name in GitHub Container Registry"
     required: true
     type: string
+
   WEBAPP_SETTINGS:
     description: "Environment variables for the web app in key=value format(space separated)"
     required: false
@@ -37,13 +38,14 @@ runs:
     - name: Create WebApp
       shell: pwsh
       run: |
+        $CONTAINER_IMAGE_NAME="${{ inputs.CONTAINER_IMAGE_NAME }}".tolower()
         echo "Creating Web App..."
         az webapp create `
           --name ${{ inputs.WEBAPP_NAME }} `
           --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
           --plan ${{ inputs.AZURE_APP_SERVICE_PLAN_NAME }} `
           --container-registry-url ghcr.io `
-          --container-image-name ${{ inputs.CONTAINER_IMAGE_NAME }} 
+          --container-image-name $CONTAINER_IMAGE_NAME
 
         if ('${{ inputs.WEBAPP_SETTINGS }}' -match '^(\w+=\w+ ?)+$') {
         echo "Set environment variables for ${{ inputs.WEBAPP_NAME }}"

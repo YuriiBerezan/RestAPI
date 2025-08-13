@@ -50,7 +50,7 @@ jobs:
           subnet_delegations["${{ vars.AZURE_SUBNET_BE }}"]="Microsoft.Web/serverFarms"
           subnet_delegations["${{ vars.AZURE_SUBNET_FE }}"]="Microsoft.Web/serverFarms"
           subnet_delegations["${{ vars.AZURE_SUBNET_DB }}"]="Microsoft.DBforPostgreSQL/flexibleServers"
-          
+
           for subnet in ${{ vars.AZURE_SUBNET_BE }} ${{ vars.AZURE_SUBNET_FE }} ${{ vars.AZURE_SUBNET_DB }} ; do
             echo "Creating Subnet for $subnet..."
             delegation="${subnet_delegations[$subnet]}"
@@ -72,7 +72,7 @@ jobs:
           done
 
       # Allow 80 and 443 ports fro,
-      - name: Create FE NSG 
+      - name: Create FE NSG
         uses: ./.github/actions/CreateNSGRule
         with:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
@@ -92,7 +92,7 @@ jobs:
 
       # No need any specific rules for BE NSG
       # Needed functionality covered by default rules
-      - name: Create DB NSG 
+      - name: Create DB NSG
         uses: ./.github/actions/CreateNSGRule
         with:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
@@ -202,38 +202,11 @@ jobs:
           docker_args: |
             VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
 
-      # - name: Build docker images and push it to GitHub Container Registry
-      #   run: |
-      #     echo "Log in to GitHub Container Registry"
-      #     echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      #     REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-
-      #     echo "Build BE docker image"
-      #     docker build \
-      #       --build-arg POSTGRES_PASSWORD="${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}" \
-      #       -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
-
-      #     echo "Docker image built successfully"
-      #     echo "Push BE docker image to GitHub Container Registry"
-      #     docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
-
-      #     VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
-
-      #     echo "Build FE docker image"
-      #     docker build \
-      #       --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
-      #       -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
-
-      #     echo "Docker image built successfully"
-      #     echo "Push FE docker image to GitHub Container Registry"
-      #     docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
-
-  create_webapp:
+  deploy_web_apps:
     name: Deploy Web Apps
     runs-on: ubuntu-latest
     environment: dev
     needs: [build_docker_image]
-
     steps:
       - name: Login to Azure
         uses: azure/login@v2
@@ -255,71 +228,25 @@ jobs:
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --sku B2 \
               --is-linux
-          fi
 
       - name: Create backend_app
-        run: |
-          BACKEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
-          PG_SERVER_NAME="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
-
-            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-            echo "Creating Web App..."
-            az webapp create \
-              --name $BACKEND_WEBAPP_NAME \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --container-registry-url ghcr.io \
-              --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
-
-          echo "Set environment variables for backend web app"
-          az webapp config appsettings set \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name $BACKEND_WEBAPP_NAME \
-            --settings \
-              POSTGRES_HOST="$PG_SERVER_NAME" \
-              POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" \
-              POSTGRES_PASSWORD="${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}"
-
-          echo "Enable logging for backend web app"
-          az webapp log config \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name $BACKEND_WEBAPP_NAME \
-            --docker-container-logging filesystem
-
-            echo "VNet integration for backend web app"
-            az webapp vnet-integration add \
-              --name "$BACKEND_WEBAPP_NAME" \
-              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-              --vnet "${{ vars.AZURE_VNET_NAME }}" \
-              --subnet "${{ vars.AZURE_SUBNET_BE }}"
+        uses: ./.github/actions/CreateWebAPP
+        with:
+          WEBAPP_NAME: "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
+          AZURE_APP_SERVICE_PLAN_NAME: ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_BE }}
+          CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-backend:latest"
+          WEBAPP_SETTINGS: "POSTGRES_HOST='${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com' POSTGRES_USER='${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}' POSTGRES_PASSWORD='${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}'"
 
       - name: Create frontend_app
-        run: |
-          FRONTEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
-            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-            echo "Creating Web App..."
-            az webapp create \
-              --name "$FRONTEND_WEBAPP_NAME" \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --container-registry-url ghcr.io \
-              --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
-
-          echo "Configuring frontend_app settings..."
-          az webapp config appsettings set \
-            --name $FRONTEND_WEBAPP_NAME \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --settings "VITE_BACKEND_API_URL=https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"
-
-          echo "Enable logging for frontend web app"
-          az webapp log config \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name $FRONTEND_WEBAPP_NAME \
-            --docker-container-logging filesystem
-
-            echo "VNet integration for frontend web app"
-            az webapp vnet-integration add \
-              --name "$FRONTEND_WEBAPP_NAME" \
-              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-              --vnet "${{ vars.AZURE_VNET_NAME }}" \
-              --subnet "${{ vars.AZURE_SUBNET_FE }}"
+        uses: ./.github/actions/CreateWebAPP
+        with:
+          WEBAPP_NAME: "rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
+          AZURE_APP_SERVICE_PLAN_NAME: ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_FE }}
+          CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-frontend:latest"
+          WEBAPP_SETTINGS: "VITE_BACKEND_API_URL='https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net'"
