@@ -188,7 +188,9 @@ jobs:
           source_path: backend_app
           tag: latest
           docker_args: |
-            POSTGRES_PASSWORD="${{ env.AZURE-POSTGRESQL-ADMIN-PASSWORD }}"
+            POSTGRES_PASSWORD="11qewewew"
+            POSTGRES_HOST="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
+            POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}"
 
       - name: Build and push FE Docker image
         uses: ./.github/actions/CreateDockerImage
