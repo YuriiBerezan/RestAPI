@@ -36,8 +36,10 @@ runs:
         echo "Building args for docker build"
         $input_args = '${{ inputs.docker_args }}'  # e.g. "FOO=bar BAZ=qux"
         $arr_ = @()
-        foreach ($input_arg in $input_args -split '\s+') {
-          $arr_ += "--build-arg $input_arg"
+        foreach ($input_arg in $input_args -split '\s+') { 
+          if (-not [string]::IsNullOrWhiteSpace($input_arg)) {
+            $arr_ += "--build-arg $input_arg"
+          }
         }
         $joinedArgs = $arr_ -join ' '  # single space-separated string
         echo "args=$joinedArgs" >> $env:GITHUB_OUTPUT
