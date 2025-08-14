@@ -51,7 +51,7 @@ runs:
 
         echo "Build ${{ inputs.image_name }} docker image"
         docker build \
-          ${ { steps.build_args.outputs.args } } \
+          ${{ steps.build_args.outputs.args }} \
           -t ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }} \
           "${{ inputs.source_path }}"
 
