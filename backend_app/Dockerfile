@@ -4,6 +4,9 @@ FROM python:3.11-slim
 # Set the working directory inside the container to /app
 WORKDIR /app
 
+ARG POSTGRES_PASSWORD
+ENV POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
 # Copy the requirements.txt file from the host to the container
 COPY requirements.txt .
 
