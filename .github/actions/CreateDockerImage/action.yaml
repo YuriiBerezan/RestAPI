@@ -59,4 +59,4 @@ runs:
 
         echo "Docker image built successfully"
         echo "Push ${{ inputs.image_name }} docker image to GitHub Container Registry"
-        docker push ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }}"
+        docker push ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }}
