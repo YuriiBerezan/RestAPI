@@ -47,7 +47,7 @@ runs:
           --container-registry-url ghcr.io `
           --container-image-name $CONTAINER_IMAGE_NAME
 
-        if ('${{ inputs.WEBAPP_SETTINGS }}' -match '^(\w+=\w+ ?)+$') {
+        if ('${{ inputs.WEBAPP_SETTINGS }}' -match '^(\w+="[^"]+" ?)+$') {
         echo "Set environment variables for ${{ inputs.WEBAPP_NAME }}"
           az webapp config appsettings set `
             --name ${{ inputs.WEBAPP_NAME }} `
