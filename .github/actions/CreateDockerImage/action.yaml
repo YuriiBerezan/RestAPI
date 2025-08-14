@@ -34,7 +34,7 @@ runs:
       id: build_args
       run: |
         echo "Building args for docker build"
-        $input_args = "${{ inputs.docker_args }}"  # e.g. "FOO=bar BAZ=qux"
+        $input_args = '${{ inputs.docker_args }}'  # e.g. "FOO=bar BAZ=qux"
         $arr_ = @()
         foreach ($input_arg in $input_args -split '\s+') {
           $arr_ += "--build-arg $input_arg"
