@@ -43,7 +43,7 @@ runs:
       shell: pwsh
       run: |
         $CONTAINER_IMAGE_NAME="${{ inputs.CONTAINER_IMAGE_NAME }}".tolower()
-        echo "Creating Web App..."
+        echo "Creating ${{ inputs.WEBAPP_NAME }} Web App..."
         az webapp create `
           --name ${{ inputs.WEBAPP_NAME }} `
           --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
@@ -62,21 +62,21 @@ runs:
           echo "No environment variables to set."
         }
 
-        echo "Enable logging for backend web app"
+        echo "Enable logging for ${{ inputs.WEBAPP_NAME }} web app"
         az webapp log config `
           --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
           --name ${{ inputs.WEBAPP_NAME }} `
           --docker-container-logging filesystem
 
-        echo "VNet integration for backend web app"
+        echo "VNet integration for ${{ inputs.WEBAPP_NAME }} web app"
         az webapp vnet-integration add `
           --name ${{ inputs.WEBAPP_NAME }} `
           --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
           --vnet "${{ inputs.WEBAPP_VNET_NAME }}" `
           --subnet "${{ inputs.WEBAPP_SUBNET }}"
 
-        if (${{ inputs.ENABLE_APP_IDENTITY }}) {
-          echo "Enable Managed Identity for backend web app"
+        if ("${{ inputs.ENABLE_APP_IDENTITY }}" -eq "true") {
+          echo "Enable Managed Identity for ${{ inputs.WEBAPP_NAME }} web app"
           az webapp identity assign `
             --name ${{ inputs.WEBAPP_NAME }} `
             --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
