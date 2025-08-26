@@ -25,12 +25,16 @@ inputs:
     description: "Container image name in GitHub Container Registry"
     required: true
     type: string
-
   WEBAPP_SETTINGS:
     description: "Environment variables for the web app in key=value format(space separated)"
     required: false
     type: string
     default: ""
+  ENABLE_APP_IDENTITY:
+    description: Enable Managed Identity for the web app
+    required: false
+    type: boolean
+    default: false
 
 runs:
   using: composite
@@ -70,3 +74,10 @@ runs:
           --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
           --vnet "${{ inputs.WEBAPP_VNET_NAME }}" `
           --subnet "${{ inputs.WEBAPP_SUBNET }}"
+
+        if (${{ inputs.ENABLE_APP_IDENTITY }}) {
+          echo "Enable Managed Identity for backend web app"
+          az webapp identity assign `
+            --name ${{ inputs.WEBAPP_NAME }} `
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
+        }

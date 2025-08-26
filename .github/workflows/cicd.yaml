@@ -243,7 +243,19 @@ jobs:
           WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
           WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_BE }}
           CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-backend:latest"
-          WEBAPP_SETTINGS: 'POSTGRES_HOST="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com" POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" POSTGRES_PASSWORD="1223wwsd"'
+          ENABLE_APP_IDENTITY: true
+          WEBAPP_SETTINGS: 'POSTGRES_HOST="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com" POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" POSTGRES_PASSWORD="@Microsoft.KeyVault(SecretUri=https://${{ vars.AZURE_KEY_VAULT_NAME }}.vault.azure.net/secrets/AZURE-POSTGRESQL-ADMIN-PASSWORD)"'
+
+      - name: Grant permissions to the BackendApp managed identity
+        run: |
+          APP_PRINCIPAL_ID=$(az webapp identity show -g "${{ vars.AZURE_RESOURCE_GROUP }}" -n "$BACKEND_WEBAPP_NAME" --query principalId -o tsv)
+          echo "Granting Key Vault access to Backend APP ($APP_PRINCIPAL_ID)"
+          az role assignment create \
+            --assignee-object-id "$APP_PRINCIPAL_ID" \
+            --assignee-principal-type ServicePrincipal \
+            --role "Key Vault Secrets User" \
+            --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/rest-api-${{ vars.WEBAPP_BACKEND_NAME }}
+
       - name: Create frontend_app
         uses: ./.github/actions/CreateWebAPP
         with:
