@@ -50,15 +50,21 @@ runs:
           --plan ${{ inputs.AZURE_APP_SERVICE_PLAN_NAME }} `
           --container-registry-url ghcr.io `
           --container-image-name $CONTAINER_IMAGE_NAME
+        
+        if ("${{ inputs.ENABLE_APP_IDENTITY }}" -eq "true") {
+          echo "Enable Managed Identity for ${{ inputs.WEBAPP_NAME }} web app"
+          az webapp identity assign `
+            --name ${{ inputs.WEBAPP_NAME }} `
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
+        }
 
         if ('${{ inputs.WEBAPP_SETTINGS }}' -match '^(\w+="[^"]+" ?)+$') {
-        echo "Set environment variables for ${{ inputs.WEBAPP_NAME }}"
+          echo "Set environment variables for ${{ inputs.WEBAPP_NAME }}"
           az webapp config appsettings set `
             --name ${{ inputs.WEBAPP_NAME }} `
             --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
             --settings ${{ inputs.WEBAPP_SETTINGS }}
-        }
-        else {
+        } else {
           echo "No environment variables to set."
         }
 
@@ -75,9 +81,3 @@ runs:
           --vnet "${{ inputs.WEBAPP_VNET_NAME }}" `
           --subnet "${{ inputs.WEBAPP_SUBNET }}"
 
-        if ("${{ inputs.ENABLE_APP_IDENTITY }}" -eq "true") {
-          echo "Enable Managed Identity for ${{ inputs.WEBAPP_NAME }} web app"
-          az webapp identity assign `
-            --name ${{ inputs.WEBAPP_NAME }} `
-            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }}
-        }
