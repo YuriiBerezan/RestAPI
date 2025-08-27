@@ -91,7 +91,7 @@ jobs:
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_BE }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
-          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_FE }}
+          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_BE }}
 
       # No need any specific rules for BE NSG
       # Needed functionality covered by default rules
@@ -102,7 +102,7 @@ jobs:
           AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_DB }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
-          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_FE }}
+          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_DB }}
 
       - name: Create Key Vault
         run: |
