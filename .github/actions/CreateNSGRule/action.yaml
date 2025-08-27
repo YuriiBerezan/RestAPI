@@ -13,6 +13,14 @@ inputs:
     description: "Azure Location"
     required: true
     type: string
+  AZURE_VNET_NAME:
+    description: "Azure VNet Name"
+    required: true
+    type: string
+  AZURE_SUBNET_NAME:
+    description: "Azure Subnet Name"
+    required: true
+    type: string
   NSG_RULE_NAME:
     description: "Azure NSG Rule Name"
     required: false
@@ -64,3 +72,18 @@ runs:
           fi
           PRIO=$((PRIO + 100))
         done
+
+    - name: Assign NSG to Subnet
+      shell: bash
+      run: |
+        echo "Checking if '${{ inputs.AZURE_NSG_NAME }}' NSG is linked to subnet..."
+        SUBNET_ID=$(az network vnet subnet show --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} --vnet-name ${{ inputs.AZURE_VNET_NAME }} --name ${{ inputs.AZURE_SUBNET_NAME }} --query id --output tsv)
+        if az network vnet subnet show --ids $SUBNET_ID --query networkSecurityGroup.id --output tsv | grep -q ${{ inputs.AZURE_NSG_NAME }}; then
+          echo "NSG is already linked to the subnet."
+        else
+          echo "Linking NSG to subnet..."
+          az network vnet subnet update \
+            --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} \
+            --ids $SUBNET_ID \
+            --network-security-group ${{ inputs.AZURE_NSG_NAME }}
+        fi
