@@ -164,6 +164,7 @@ jobs:
 
           echo "[DEBUG] az network private-endpoint create -g '${{ secrets.AZURE_RESOURCE_GROUP }}' -n $PE"
           echo "[DEBUG]   --vnet-name ${{ vars.AZURE_VNET_NAME }} --subnet $SUBNET"
+          echo "[DEBUG]   --private-connection-resource-id $KV_ID"
           echo "[DEBUG]   --group-ids vault --connection-name $CONN_NAME"
 
           az network private-endpoint create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $PE \
