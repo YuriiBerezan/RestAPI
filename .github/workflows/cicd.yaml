@@ -121,7 +121,7 @@ jobs:
 
           for assignee in ${{ vars.DEV_GROUP_ID }} ${{ vars.AZURE_CLIENT_ID }}
           do
-            existing=$(az role assignment list --scope "$KEY_VAULT_ID" --assignee "$assignee" --role "$roleDefinitionId" --query "[].id" -o tsv)
+            existing=$(az role assignment list --scope "$KEY_VAULT_ID" --assignee "$assignee" --role "Key Vault Secrets Officer" --query "[].id" -o tsv)
             if [ -z "$existing" ]; then
               az role assignment create \
                --assignee "$assignee" \
