@@ -80,4 +80,3 @@ runs:
           --resource-group ${{ inputs.AZURE_RESOURCE_GROUP }} `
           --vnet "${{ inputs.WEBAPP_VNET_NAME }}" `
           --subnet "${{ inputs.WEBAPP_SUBNET }}"
-

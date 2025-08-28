@@ -30,7 +30,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Create VNet
+      - name: Create VNet and Subnets
         run: |
           echo "Checking if VNet exists..."
           if az network vnet show --name ${{ vars.AZURE_VNET_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
@@ -43,7 +43,7 @@ jobs:
               --location ${{ vars.AZURE_LOCATION }} \
               --address-prefixes 10.0.0.0/16
           fi
-          address_prefix=1
+          address_prefix=0
 
           # Define subnet delegation mapping
           declare -A subnet_delegations
@@ -51,7 +51,7 @@ jobs:
           subnet_delegations["${{ vars.AZURE_SUBNET_FE }}"]="Microsoft.Web/serverFarms"
           subnet_delegations["${{ vars.AZURE_SUBNET_DB }}"]="Microsoft.DBforPostgreSQL/flexibleServers"
 
-          for subnet in ${{ vars.AZURE_SUBNET_BE }} ${{ vars.AZURE_SUBNET_FE }} ${{ vars.AZURE_SUBNET_DB }} ; do
+          for subnet in Default ${{ vars.AZURE_SUBNET_BE }} ${{ vars.AZURE_SUBNET_FE }} ${{ vars.AZURE_SUBNET_DB }} ; do
             echo "Creating Subnet for $subnet..."
             delegation="${subnet_delegations[$subnet]}"
             if [[ -n "$delegation" ]]; then
@@ -126,6 +126,33 @@ jobs:
              --assignee ${{ vars.AZURE_CLIENT_ID }} \
              --role "Key Vault Secrets Officer" \
              --scope "/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.KeyVault/vaults/${{ vars.AZURE_KEY_VAULT_NAME }}"
+
+      - name: Create Key Vault Private Endpoint
+        run: |
+          SUBNET="Default"
+          PE=restapi-kv-pe-we-01
+          ZONE=privatelink.vaultcore.azure.net
+          CONN_NAME=restapi-kv-pe-conn
+
+          # get resource IDs
+          KV_ID=$(az keyvault show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_KEY_VAULT_NAME }} --query id -o tsv)
+          VNET_ID=$(az network vnet show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_VNET_NAME }} --query id -o tsv)
+
+          echo "Creating private DNS zone for Key Vault"
+          az network private-dns zone create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $ZONE
+          az network private-dns link vnet create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n kv-dns-link \
+            --zone-name $ZONE --virtual-network $VNET_ID --registration-enabled false
+
+          echo "Creating private endpoint"
+          az network private-endpoint create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $PE \
+            --vnet-name ${{ vars.AZURE_VNET_NAME }} --subnet $SUBNET \
+            --private-connection-resource-id $KV_ID \
+            --group-ids vault --connection-name $CONN_NAME
+
+          echo "Attaching the PE to the DNS zone (auto creates A record)"
+          PE_ID=$(az network private-endpoint show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $PE --query id -o tsv)
+          az network private-endpoint dns-zone-group create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" --endpoint-name $PE \
+            -n kv-dns-group --private-dns-zone $ZONE --zone-name $ZONE
 
       - name: Create PostgreSQL Server
         id: create_postgres_server
