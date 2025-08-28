@@ -144,10 +144,21 @@ jobs:
           echo "[DEBUG] KV_ID: '$KV_ID'"
           VNET_ID=$(az network vnet show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_VNET_NAME }} --query id -o tsv)
 
-          echo "Creating private DNS zone for Key Vault"
-          az network private-dns zone create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $ZONE
-          az network private-dns link vnet create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n kv-dns-link \
-            --zone-name $ZONE --virtual-network $VNET_ID --registration-enabled false
+          # Check if the DNS zone exists
+          existing_zone=$(az network private-dns zone list --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query "[?name=='$ZONE']" -o tsv)
+
+          if [ -z "$existing_zone" ]; then
+            echo "Creating private DNS zone for Key Vault"
+            az network private-dns zone create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $ZONE
+            az network private-dns link vnet create \
+              -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              -n kv-dns-link \
+              --zone-name $ZONE \
+              --virtual-network $VNET_ID \
+              --registration-enabled false
+          else
+            echo "DNS zone $ZONE already exists, skipping creation."
+          fi
 
           echo "Creating private endpoint"
           az network private-endpoint create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $PE \
