@@ -153,6 +153,7 @@ jobs:
             az network private-dns link vnet create \
               -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               -n kv-dns-link \
+              --location ${{ vars.AZURE_LOCATION }} \
               --zone-name $ZONE \
               --virtual-network $VNET_ID \
               --registration-enabled false
