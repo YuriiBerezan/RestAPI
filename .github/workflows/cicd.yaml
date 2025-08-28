@@ -135,12 +135,13 @@ jobs:
       - name: Create Key Vault Private Endpoint
         run: |
           SUBNET="Default"
-          PE=restapi-kv-pe-we-01
-          ZONE=privatelink.vaultcore.azure.net
-          CONN_NAME=restapi-kv-pe-conn
+          PE="restapi-kv-pe-we-01"
+          ZONE="privatelink.vaultcore.azure.net"
+          CONN_NAME="restapi-kv-pe-conn"
 
           # get resource IDs
           KV_ID=$(az keyvault show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_KEY_VAULT_NAME }} --query id -o tsv)
+          echo "[DEBUG] KV_ID: '$KV_ID'"
           VNET_ID=$(az network vnet show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_VNET_NAME }} --query id -o tsv)
 
           echo "Creating private DNS zone for Key Vault"
