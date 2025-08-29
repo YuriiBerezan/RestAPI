@@ -1,0 +1,62 @@
+name: Create Docker Image NSG
+description: |
+  'Builds a Docker image in the repository'
+inputs:
+  docker_password:
+    required: true
+    description: "Docker password"
+  docker_username:
+    required: true
+    description: "Docker username"
+  docker_owner:
+    required: true
+    description: "Docker owner"
+  docker_args:
+    description: "Docker build arguments" # e.g. "FOO=bar BAZ=qux"
+    required: false
+    default: ""
+  tag:
+    description: "v1.0.0"
+    required: false
+    default: "latest"
+  image_name:
+    description: "Name of the Docker image"
+    required: true
+  source_path:
+    description: "Path to the Dockerfile"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build args function
+      shell: pwsh
+      id: build_args
+      run: |
+        echo "Building args for docker build"
+        $input_args = '${{ inputs.docker_args }}'  # e.g. "FOO=bar BAZ=qux"
+        $arr_ = @()
+        foreach ($input_arg in $input_args -split '\s+') { 
+          if (-not [string]::IsNullOrWhiteSpace($input_arg)) {
+            $arr_ += "--build-arg $input_arg"
+          }
+        }
+        $joinedArgs = $arr_ -join ' '  # single space-separated string
+        echo "args=$joinedArgs" >> $env:GITHUB_OUTPUT
+
+    - name: Build docker images and push it to GitHub Container Registry
+      shell: bash
+      run: |
+        echo "Log in to GitHub Container Registry"
+        echo "${{ inputs.docker_password }}" | docker login ghcr.io -u "${{ inputs.docker_username }}" --password-stdin
+        REPO_OWNER_LOWER=$(echo "${{ inputs.docker_owner }}" | tr '[:upper:]' '[:lower:]')
+
+        echo "Build ${{ inputs.image_name }} docker image"
+        docker build \
+          ${{ steps.build_args.outputs.args }} \
+          -t ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }} \
+          "${{ inputs.source_path }}"
+
+        echo "Docker image built successfully"
+        echo "Push ${{ inputs.image_name }} docker image to GitHub Container Registry"
+        docker push ghcr.io/$REPO_OWNER_LOWER/${{ inputs.image_name }}:${{ inputs.tag }}

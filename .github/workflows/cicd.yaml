@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - create_pipeline
+      - feature/password_in_keyvault
 
 permissions:
   id-token: write
@@ -13,18 +13,97 @@ permissions:
   packages: write
 
 jobs:
-  create_postgres_server_and_key_vault:
+  create_core_services:
+    # Network, KeyVault, PostgreSQL
     name: Deploy resources for restapi
     runs-on: ubuntu-latest
     environment: dev
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create VNet and Subnets
+        run: |
+          echo "Checking if VNet exists..."
+          if az network vnet show --name ${{ vars.AZURE_VNET_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}; then
+            echo "VNet already exists."
+          else
+            echo "Creating VNet..."
+            az network vnet create \
+              --name ${{ vars.AZURE_VNET_NAME }} \
+              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+              --location ${{ vars.AZURE_LOCATION }} \
+              --address-prefixes 10.0.0.0/16
+          fi
+          address_prefix=0
+
+          # Define subnet delegation mapping
+          declare -A subnet_delegations
+          subnet_delegations["${{ vars.AZURE_SUBNET_BE }}"]="Microsoft.Web/serverFarms"
+          subnet_delegations["${{ vars.AZURE_SUBNET_FE }}"]="Microsoft.Web/serverFarms"
+          subnet_delegations["${{ vars.AZURE_SUBNET_DB }}"]="Microsoft.DBforPostgreSQL/flexibleServers"
+
+          for subnet in Default ${{ vars.AZURE_SUBNET_BE }} ${{ vars.AZURE_SUBNET_FE }} ${{ vars.AZURE_SUBNET_DB }} ; do
+            echo "Creating Subnet for $subnet..."
+            delegation="${subnet_delegations[$subnet]}"
+            if [[ -n "$delegation" ]]; then
+              az network vnet subnet create \
+                --name $subnet \
+                --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+                --vnet-name ${{ vars.AZURE_VNET_NAME }} \
+                --address-prefixes 10.0.$address_prefix.0/24 \
+                --delegations $delegation
+            else
+              az network vnet subnet create \
+                --name $subnet \
+                --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+                --vnet-name ${{ vars.AZURE_VNET_NAME }} \
+                --address-prefixes 10.0.$address_prefix.0/24
+            fi
+            address_prefix=$((address_prefix + 1))
+          done
+
+      # Allow 80 and 443 ports fro,
+      - name: Create FE NSG
+        uses: ./.github/actions/CreateNSGRule
+        with:
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_FE }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          NSG_RULE_NAME: "AllowTraffic4Port"
+          ALLOWED_PORTS: "80,443"
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_FE }}
+      # No need any specific rules for BE NSG
+      # Needed functionality covered by default rules
+      - name: Create BE NSG
+        uses: ./.github/actions/CreateNSGRule
+        with:
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_BE }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_BE }}
+
+      # No need any specific rules for BE NSG
+      # Needed functionality covered by default rules
+      - name: Create DB NSG
+        uses: ./.github/actions/CreateNSGRule
+        with:
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_NSG_NAME: ${{ vars.AZURE_NSG_NAME_DB }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_SUBNET_NAME: ${{ vars.AZURE_SUBNET_DB }}
+
       - name: Create Key Vault
         run: |
           echo "Checking if Key Vault exists..."
@@ -37,37 +116,94 @@ jobs:
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
               --location ${{ vars.AZURE_LOCATION }}
           fi
-           
-          az role assignment create \
-             --assignee ${{ vars.DEV_GROUP_ID }} \
-             --role "Key Vault Secrets Officer" \
-             --scope "/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.KeyVault/vaults/${{ vars.AZURE_KEY_VAULT_NAME }}"
 
-          az role assignment create \
-             --assignee ${{ vars.AZURE_CLIENT_ID }} \
-             --role "Key Vault Secrets Officer" \
-             --scope "/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.KeyVault/vaults/${{ vars.AZURE_KEY_VAULT_NAME }}"
+          KEY_VAULT_ID=$(az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query id -o tsv)
+
+          for assignee in ${{ vars.DEV_GROUP_ID }} ${{ vars.AZURE_CLIENT_ID }}; do
+            existing=$(az role assignment list --scope "$KEY_VAULT_ID" --assignee "$assignee" --role "Key Vault Secrets Officer" --query "[].id" -o tsv)
+            if [ -z "$existing" ]; then
+              az role assignment create \
+               --assignee "$assignee" \
+               --role "Key Vault Secrets Officer" \
+               --scope $KEY_VAULT_ID
+            else
+              echo "Role assignment already exists, skipping creation."
+            fi
+          done
+
+      - name: Create Key Vault Private Endpoint
+        run: |
+          SUBNET="Default"
+          PE="restapi-kv-pe-we-01"
+          ZONE="privatelink.vaultcore.azure.net"
+          CONN_NAME="restapi-kv-pe-conn"
+
+          # get resource IDs
+          KEY_VAULT_ID=$(az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query id -o tsv)
+          VNET_ID=$(az network vnet show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_VNET_NAME }} --query id -o tsv)
+
+          # Check if the DNS zone exists
+          existing_zone=$(az network private-dns zone list --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query "[?name=='$ZONE']" -o tsv)
+
+          if [ -z "$existing_zone" ]; then
+            echo "Creating private DNS zone for Key Vault"
+            az network private-dns zone create --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name $ZONE
+            az network private-dns link vnet create \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name kv-dns-link \
+              --location ${{ vars.AZURE_LOCATION }} \
+              --zone-name $ZONE \
+              --virtual-network $VNET_ID \
+              --registration-enabled false
+          else
+            echo "DNS zone $ZONE already exists, skipping creation."
+          fi
+
+          echo "Creating private endpoint"
+          az network private-endpoint create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name $PE \
+            --location ${{ vars.AZURE_LOCATION }} \
+            --vnet-name ${{ vars.AZURE_VNET_NAME }} --subnet $SUBNET \
+            --private-connection-resource-id $KEY_VAULT_ID \
+            --group-ids vault --connection-name $CONN_NAME
+
+          echo "Attaching the PE to the DNS zone (auto creates A record)"
+          PE_ID=$(az network private-endpoint show --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name $PE --query id -o tsv)
+          az network private-endpoint dns-zone-group create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --endpoint-name $PE \
+            --name kv-dns-group \
+            --private-dns-zone $ZONE \
+            --zone-name $ZONE
 
       - name: Create PostgreSQL Server
+        id: create_postgres_server
         run: |
-          IP=$(curl -s https://ifconfig.me)
-          echo "Runner Public IP: $IP"
           if az postgres flexible-server show --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"; then
             echo "PostgreSQL server already exists."
+            echo "Fetching PostgreSQL admin password from Azure Key Vault"
+            PASSWORD=$(az keyvault secret show --name "AZURE-POSTGRESQL-ADMIN-PASSWORD" --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --query value -o tsv)
           else
+            echo "Generate password for database admin user"
+            PASSWORD=$(openssl rand -base64 16)
+
             echo "Creating PostgreSQL server..."
             az postgres flexible-server create \
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
               --location "${{ vars.AZURE_LOCATION }}" \
               --admin-user "${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" \
-              --admin-password "${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}" \
+              --admin-password "$PASSWORD" \
               --tier Burstable \
               --sku-name Standard_B1ms \
               --version 16 \
-              --public-access $IP
-            fi
-            az keyvault secret set --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --name "AZURE-POSTGRESQL-ADMIN-PASSWORD" --value "${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}"
+              --vnet "${{ vars.AZURE_VNET_NAME }}" \
+              --subnet "${{ vars.AZURE_SUBNET_DB }}" \
+              --yes
+
+            echo "Save PostgreSQL admin user and password in Azure Key Vault"
+            az keyvault secret set --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --name "AZURE-POSTGRESQL-ADMIN-PASSWORD" --value "$PASSWORD"
             az keyvault secret set --vault-name "${{ vars.AZURE_KEY_VAULT_NAME }}" --name "AZURE-POSTGRESQL-ADMIN-USER" --value "${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}"
 
             echo "Create PostgreSQL database"
@@ -75,53 +211,16 @@ jobs:
               --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
               --server-name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
               --database-name tasks_db
-
-            # echo "Allow public access from any Azure service within Azure to this server"
-            # az postgres flexible-server update \
-            #   --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            #   --name "${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}" \
-            #   --public-network-access Enabled
+          fi
+          echo "::add-mask::$PASSWORD"
 
   build_docker_image:
     name: Build docker image and save in Github Container Registry
     runs-on: ubuntu-latest
     environment: dev
+    needs: [create_core_services]
     env:
       WEBAPP_BACKEND_NAME: ${{ vars.WEBAPP_BACKEND_NAME }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Build docker images and push it to GitHub Container Registry
-        run: |
-          echo "Log in to GitHub Container Registry"
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-
-          echo "Build BE docker image"
-          docker build -t ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest backend_app
-          
-          echo "Docker image built successfully"
-          echo "Push BE docker image to GitHub Container Registry"
-          docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-backend:latest
-
-          VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
-
-          echo "Build FE docker image"
-          docker build \
-            --build-arg VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL \
-            -t ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest frontend_app
-          
-          echo "Docker image built successfully"
-          echo "Push FE docker image to GitHub Container Registry"
-          docker push ghcr.io/$REPO_OWNER_LOWER/rest-api-frontend:latest
-
-  create_webapp:
-    name: Deploy Web Apps
-    runs-on: ubuntu-latest
-    environment: dev
-    needs: [create_postgres_server_and_key_vault, build_docker_image]
-
     steps:
       - name: Login to Azure
         uses: azure/login@v2
@@ -129,6 +228,50 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build and push BE Docker image
+        uses: ./.github/actions/CreateDockerImage
+        with:
+          docker_password: ${{ secrets.GITHUB_TOKEN }}
+          docker_username: ${{ github.actor }}
+          docker_owner: ${{ github.repository_owner }}
+          image_name: rest-api-backend
+          source_path: backend_app
+          tag: latest
+          docker_args: |
+            POSTGRES_PASSWORD="Placeholder"
+            POSTGRES_HOST="Placeholder"
+            POSTGRES_USER="Placeholder"
+
+      - name: Build and push FE Docker image
+        uses: ./.github/actions/CreateDockerImage
+        with:
+          docker_password: ${{ secrets.GITHUB_TOKEN }}
+          docker_username: ${{ github.actor }}
+          docker_owner: ${{ github.repository_owner }}
+          image_name: rest-api-frontend
+          source_path: frontend_app
+          tag: latest
+          docker_args: |
+            VITE_BACKEND_API_URL="https://rest-api-$WEBAPP_BACKEND_NAME.azurewebsites.net"
+
+  deploy_web_apps:
+    name: Deploy Web Apps
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: [build_docker_image]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
       - name: Create App Service Plan
         run: |
           echo "Checking if App Service Plan exists..."
@@ -143,55 +286,43 @@ jobs:
               --sku B2 \
               --is-linux
           fi
+
       - name: Create backend_app
+        uses: ./.github/actions/CreateWebAPP
+        with:
+          WEBAPP_NAME: "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
+          AZURE_APP_SERVICE_PLAN_NAME: ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_BE }}
+          CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-backend:latest"
+          ENABLE_APP_IDENTITY: true
+          WEBAPP_SETTINGS: 'POSTGRES_HOST="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com" POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" POSTGRES_PASSWORD="@Microsoft.KeyVault(SecretUri=https://${{ vars.AZURE_KEY_VAULT_NAME }}.vault.azure.net/secrets/AZURE-POSTGRESQL-ADMIN-PASSWORD)"'
+
+      - name: Grant permissions to the BackendApp managed identity
         run: |
-          BACKEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_BACKEND_NAME }}"
-          PG_SERVER_NAME="${{ vars.AZURE_POSTGRESQL_SERVER_NAME }}.postgres.database.azure.com"
+          KEY_VAULT_ID=$(az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query id -o tsv)
+          APP_PRINCIPAL_ID=$(az webapp identity show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" --name "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}" --query principalId -o tsv)
 
-            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-            echo "Creating Web App..."
-            az webapp create \
-              --name $BACKEND_WEBAPP_NAME \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --container-registry-url ghcr.io \
-              --container-image-name $REPO_OWNER_LOWER/rest-api-backend:latest
-
-          echo "Set environment variables for backend web app"
-          az webapp config appsettings set \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name $BACKEND_WEBAPP_NAME \
-            --settings \
-              POSTGRES_HOST="$PG_SERVER_NAME" \
-              POSTGRES_USER="${{ secrets.AZURE_POSTGRESQL_ADMIN_USER }}" \
-              POSTGRES_PASSWORD="${{ secrets.AZURE_POSTGRESQL_ADMIN_PASSWORD }}"
-
-          echo "Enable logging for backend web app"
-          az webapp log config \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name $BACKEND_WEBAPP_NAME \
-            --docker-container-logging filesystem
+          existing=$(az role assignment list --scope "$KEY_VAULT_ID" --assignee "$APP_PRINCIPAL_ID" --role "Key Vault Secrets User" --query "[].id" -o tsv)
+          if [ -z "$existing" ]; then
+            echo "Granting Key Vault access to Backend APP ($APP_PRINCIPAL_ID)"
+            az role assignment create \
+              --assignee-object-id "$APP_PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Key Vault Secrets User" \
+              --scope "$KEY_VAULT_ID"
+          else
+            echo "Backend APP ($APP_PRINCIPAL_ID) already has Key Vault access."
+          fi
 
       - name: Create frontend_app
-        run: |
-          FRONTEND_WEBAPP_NAME="rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
-            REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-            echo "Creating Web App..."
-            az webapp create \
-              --name "$FRONTEND_WEBAPP_NAME" \
-              --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --plan ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }} \
-              --container-registry-url ghcr.io \
-              --container-image-name $REPO_OWNER_LOWER/rest-api-frontend:latest
-
-          echo "Configuring frontend_app settings..."
-          az webapp config appsettings set \
-            --name $FRONTEND_WEBAPP_NAME \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --settings "VITE_BACKEND_API_URL=https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"
-
-          echo "Enable logging for frontend web app"
-          az webapp log config \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --name $FRONTEND_WEBAPP_NAME \
-            --docker-container-logging filesystem
+        uses: ./.github/actions/CreateWebAPP
+        with:
+          WEBAPP_NAME: "rest-api-${{ vars.WEBAPP_FRONTEND_NAME }}"
+          AZURE_APP_SERVICE_PLAN_NAME: ${{ vars.AZURE_APP_SERVICE_PLAN_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          WEBAPP_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          WEBAPP_SUBNET: ${{ vars.AZURE_SUBNET_FE }}
+          CONTAINER_IMAGE_NAME: "${{ github.repository_owner }}/rest-api-frontend:latest"
+          WEBAPP_SETTINGS: 'VITE_BACKEND_API_URL="https://rest-api-${{ vars.WEBAPP_BACKEND_NAME }}.azurewebsites.net"'
