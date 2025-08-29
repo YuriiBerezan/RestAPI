@@ -119,8 +119,7 @@ jobs:
 
           KEY_VAULT_ID=$(az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query id -o tsv)
 
-          for assignee in ${{ vars.DEV_GROUP_ID }} ${{ vars.AZURE_CLIENT_ID }}
-          do
+          for assignee in ${{ vars.DEV_GROUP_ID }} ${{ vars.AZURE_CLIENT_ID }}; do
             existing=$(az role assignment list --scope "$KEY_VAULT_ID" --assignee "$assignee" --role "Key Vault Secrets Officer" --query "[].id" -o tsv)
             if [ -z "$existing" ]; then
               az role assignment create \
@@ -140,8 +139,7 @@ jobs:
           CONN_NAME="restapi-kv-pe-conn"
 
           # get resource IDs
-          KV_ID=$(az keyvault show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_KEY_VAULT_NAME }} --query id -o tsv)
-          echo "[DEBUG] KV_ID: '$KV_ID'"
+          KEY_VAULT_ID=$(az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query id -o tsv)
           VNET_ID=$(az network vnet show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n ${{ vars.AZURE_VNET_NAME }} --query id -o tsv)
 
           # Check if the DNS zone exists
@@ -149,10 +147,10 @@ jobs:
 
           if [ -z "$existing_zone" ]; then
             echo "Creating private DNS zone for Key Vault"
-            az network private-dns zone create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $ZONE
+            az network private-dns zone create --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name $ZONE
             az network private-dns link vnet create \
-              -g "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-              -n kv-dns-link \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name kv-dns-link \
               --location ${{ vars.AZURE_LOCATION }} \
               --zone-name $ZONE \
               --virtual-network $VNET_ID \
@@ -162,23 +160,22 @@ jobs:
           fi
 
           echo "Creating private endpoint"
-
-          echo "[DEBUG] az network private-endpoint create -g '${{ secrets.AZURE_RESOURCE_GROUP }}' -n $PE"
-          echo "[DEBUG]   --vnet-name ${{ vars.AZURE_VNET_NAME }} --subnet $SUBNET"
-          echo "[DEBUG]   --private-connection-resource-id $KV_ID"
-          echo "[DEBUG]   --group-ids vault --connection-name $CONN_NAME"
-
           az network private-endpoint create \
-            -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $PE \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name $PE \
             --location ${{ vars.AZURE_LOCATION }} \
             --vnet-name ${{ vars.AZURE_VNET_NAME }} --subnet $SUBNET \
-            --private-connection-resource-id $KV_ID \
+            --private-connection-resource-id $KEY_VAULT_ID \
             --group-ids vault --connection-name $CONN_NAME
 
           echo "Attaching the PE to the DNS zone (auto creates A record)"
-          PE_ID=$(az network private-endpoint show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n $PE --query id -o tsv)
-          az network private-endpoint dns-zone-group create -g "${{ secrets.AZURE_RESOURCE_GROUP }}" --endpoint-name $PE \
-            -n kv-dns-group --private-dns-zone $ZONE --zone-name $ZONE
+          PE_ID=$(az network private-endpoint show --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name $PE --query id -o tsv)
+          az network private-endpoint dns-zone-group create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --endpoint-name $PE \
+            --name kv-dns-group \
+            --private-dns-zone $ZONE \
+            --zone-name $ZONE
 
       - name: Create PostgreSQL Server
         id: create_postgres_server
@@ -304,13 +301,20 @@ jobs:
 
       - name: Grant permissions to the BackendApp managed identity
         run: |
-          APP_PRINCIPAL_ID=$(az webapp identity show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" -n "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}" --query principalId -o tsv)
-          echo "Granting Key Vault access to Backend APP ($APP_PRINCIPAL_ID)"
-          az role assignment create \
-            --assignee-object-id "$APP_PRINCIPAL_ID" \
-            --assignee-principal-type ServicePrincipal \
-            --role "Key Vault Secrets User" \
-            --scope /subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ secrets.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/rest-api-${{ vars.WEBAPP_BACKEND_NAME }}
+          KEY_VAULT_ID=$(az keyvault show --name ${{ vars.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query id -o tsv)
+          APP_PRINCIPAL_ID=$(az webapp identity show -g "${{ secrets.AZURE_RESOURCE_GROUP }}" --name "rest-api-${{ vars.WEBAPP_BACKEND_NAME }}" --query principalId -o tsv)
+
+          existing=$(az role assignment list --scope "$KEY_VAULT_ID" --assignee "$APP_PRINCIPAL_ID" --role "Key Vault Secrets User" --query "[].id" -o tsv)
+          if [ -z "$existing" ]; then
+            echo "Granting Key Vault access to Backend APP ($APP_PRINCIPAL_ID)"
+            az role assignment create \
+              --assignee-object-id "$APP_PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Key Vault Secrets User" \
+              --scope "$KEY_VAULT_ID"
+          else
+            echo "Backend APP ($APP_PRINCIPAL_ID) already has Key Vault access."
+          fi
 
       - name: Create frontend_app
         uses: ./.github/actions/CreateWebAPP
